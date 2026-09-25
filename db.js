@@ -1,12 +1,15 @@
 const mongoose=require('mongoose');
-const mongooseURL='mongodb://localhost:27017/FoodDonationPlatform';
+
+require('dotenv').config();
+
+const mongooseURL=process.env.LOCALDB;
 
 mongoose.connect(mongooseURL);
 
 const db=mongoose.connection;
 
 db.on('connected',()=>{
-    console.log("Server is connected successfully.");
+    console.log("Server is connected successfully to the database.");
 });
 
 db.on('disconnected',()=>{

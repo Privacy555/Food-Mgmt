@@ -14,7 +14,7 @@ const OrphanageSchema= new mongoose.Schema({
     email:{
         required:true,
         unique:true,
-        type:string
+        type:String
     },
     password: {
         type: String,
@@ -25,11 +25,39 @@ const OrphanageSchema= new mongoose.Schema({
         "Password must be at least 8 characters long and contain at least one letter and one number."
         ]
     }
-    },
+    ,
     role:{
         type:String,
         enum:['vendors','orphanage']
+    },
+    phone:{
+        type:String
+    },
+    address:{
+        type:String
+    },
+    location:{
+        type:{
+            type:String,
+            enum:['Point'],
+            default:'Point'
+        },
+        coordinates:{
+            type:[Number],
+            default:[76.7794, 30.7333]
+        }
+    },
+    verificationStatus:{
+        type:String,
+        enum:['pending','verified','rejected'],
+        default:'pending'
+    },
+    accountStatus:{
+        type:String,
+        enum:['active','inactive','blocked'],
+        default:'active'
     }
+}
 ,{timestamps:true});
 
 
@@ -56,5 +84,5 @@ OrphanageSchema.methods.comparePassword= async function(userPwd){
     }
 }
 
-const Orphanage= new mongoose.model('Orphanage',OrphanageSchema);
+const Orphanage= mongoose.model('Orphanage',OrphanageSchema);
 module.exports=Orphanage;
