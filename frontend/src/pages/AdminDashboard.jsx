@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, UserCheck, ShieldCheck, XCircle, LayoutDashboard } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Users, UserCheck, ShieldCheck, LayoutDashboard } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({ totalVendors: 0, totalReceivers: 0, totalDonations: 0, completedDonations: 0 });
@@ -30,20 +31,24 @@ const AdminDashboard = () => {
   };
 
   const handleVerifyVendor = async (id) => {
+    const toastId = toast.loading('Verifying vendor...');
     try {
       await api.put(`/admin/vendors/${id}/verify`);
+      toast.success('Vendor verified!', { id: toastId });
       fetchData();
     } catch (err) {
-      console.error(err);
+      toast.error('Failed to verify vendor.', { id: toastId });
     }
   };
 
   const handleVerifyReceiver = async (id) => {
+    const toastId = toast.loading('Verifying receiver...');
     try {
       await api.put(`/admin/receivers/${id}/verify`);
+      toast.success('Receiver verified!', { id: toastId });
       fetchData();
     } catch (err) {
-      console.error(err);
+      toast.error('Failed to verify receiver.', { id: toastId });
     }
   };
 

@@ -173,6 +173,18 @@ h1, h2, h3, h4 {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+.form-control.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: #ef4444;
+}
+
 .auth-container {
   display: flex;
   justify-content: center;
@@ -268,6 +280,7 @@ h1, h2, h3, h4 {
 .gap-4 { gap: 1rem; }
 .grid { display: grid; }
 .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.col-span-2 { grid-column: span 2; }
 .py-12 { padding-top: 3rem; padding-bottom: 3rem; }
 .text-sm { font-size: 0.875rem; }
 .text-xs { font-size: 0.75rem; }

@@ -23,7 +23,8 @@ const OrphanageSchema= new mongoose.Schema({
         match: [
         /^(?=.*[A-Za-z])(?=.*\d).{8,}$/,
         "Password must be at least 8 characters long and contain at least one letter and one number."
-        ]
+        ],
+        select: false
     }
     ,
     role:{
@@ -56,6 +57,9 @@ const OrphanageSchema= new mongoose.Schema({
         type:String,
         enum:['active','inactive','blocked'],
         default:'active'
+    },
+    lastLogin: {
+        type: Date
     }
 }
 ,{timestamps:true});

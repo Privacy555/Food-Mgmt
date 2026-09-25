@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 import { MapPin, HeartHandshake, Navigation } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -17,8 +18,16 @@ const ReceiverDashboard = () => {
   const [available, setAvailable] = useState([]);
   const [myClaims, setMyClaims] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mapCenter, setMapCenter] = useState([30.7333, 76.7794]);
 
   useEffect(() => {
+    // Use browser geolocation to center the map
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setMapCenter([pos.coords.latitude, pos.coords.longitude]),
+        () => {} // silently fall back to default
+      );
+    }
     fetchData();
   }, []);
 
@@ -38,11 +47,13 @@ const ReceiverDashboard = () => {
   };
 
   const handleClaim = async (id) => {
+    const toastId = toast.loading('Claiming...');
     try {
       await api.post(`/receivers/donations/${id}/claim`);
+      toast.success('Food claimed successfully!', { id: toastId });
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error claiming donation');
+      toast.error(err.response?.data?.message || 'Error claiming donation', { id: toastId });
     }
   };
 
@@ -62,7 +73,7 @@ const ReceiverDashboard = () => {
           <h2 className="text-2xl mb-6">Nearby Donations</h2>
           
           <div className="mb-6 rounded-lg overflow-hidden border border-gray-200 shadow-sm" style={{ height: '300px' }}>
-            <MapContainer center={[30.7333, 76.7794]} zoom={12} style={{ height: '100%', width: '100%' }}>
+            <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; OpenStreetMap contributors'

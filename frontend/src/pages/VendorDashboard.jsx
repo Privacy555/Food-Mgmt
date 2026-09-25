@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 import { PackagePlus, List, Clock, CheckCircle } from 'lucide-react';
 
 const VendorDashboard = () => {
   const [donations, setDonations] = useState([]);
   const [formData, setFormData] = useState({
-    foodName: '', foodType: 'veg', quantity: '', quantityUnit: 'meals', 
+    foodName: '', foodType: 'veg', quantity: '', quantityUnit: 'meals',
     expiryTime: '', notes: ''
   });
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchDonations();
@@ -29,7 +29,7 @@ const VendorDashboard = () => {
 
   const handleCreateDonation = async (e) => {
     e.preventDefault();
-    setMessage('');
+    const toastId = toast.loading('Posting donation...');
     try {
       const payload = {
         ...formData,
@@ -38,11 +38,11 @@ const VendorDashboard = () => {
         pickupLocation: { address: 'Vendor Address', coordinates: [76.77, 30.73] }
       };
       await api.post('/vendors/donations', payload);
-      setMessage('Donation created successfully!');
+      toast.success('Donation posted successfully!', { id: toastId });
       fetchDonations();
       setFormData({ foodName: '', foodType: 'veg', quantity: '', quantityUnit: 'meals', expiryTime: '', notes: '' });
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Error creating donation.');
+      toast.error(err.response?.data?.message || 'Error creating donation.', { id: toastId });
     }
   };
 
