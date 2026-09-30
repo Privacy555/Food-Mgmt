@@ -3,6 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
+const F = ({ label, id, error, children }) => (
+  <div className="form-group">
+    <label>{label}</label>
+    {children}
+    {error && <span className="field-error">{error}</span>}
+  </div>
+);
+
 const RegisterVendor = () => {
   const [formData, setFormData] = useState({
     name: '', ownerName: '', email: '', password: '', phone: '',
@@ -52,13 +60,7 @@ const RegisterVendor = () => {
     }
   };
 
-  const F = ({ label, id, error, children }) => (
-    <div className="form-group">
-      <label>{label}</label>
-      {children}
-      {error && <span className="field-error">{error}</span>}
-    </div>
-  );
+
 
   return (
     <div className="auth-container animate-fade-in py-12">
