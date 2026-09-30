@@ -42,6 +42,11 @@ app.use('/admin/admin/login', authLimiter);
 // ── DB connection ─────────────────────────────────────────────
 require('./db');
 
+// ── Health Check ────────────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date() });
+});
+
 // ── Routes ────────────────────────────────────────────────────
 const vendorRoute = require('./routes/vendorsRoute');
 const receiverRoute = require('./routes/ReceiversRoute');
@@ -80,7 +85,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found.' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port:${PORT}`);
 });
