@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://food-mgmt-1.onrender.com',
+  baseURL: import.meta.env.VITE_API_URL || 'https://food-mgmt-2.onrender.com',
 });
 
 // Add a request interceptor to attach the JWT token
