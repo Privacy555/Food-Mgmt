@@ -10,8 +10,11 @@ const ProtectedRoute = ({ children, role }) => {
   if (!user) return <Navigate to="/" replace />;
 
   // Case-insensitive role check
-  if (role && user.role?.toLowerCase() !== role.toLowerCase()) {
-    return <Navigate to="/" replace />;
+  if (role) {
+    const allowed = role.toLowerCase() === 'admin' ? ['admin', 'super_admin'] : [role.toLowerCase()];
+    if (!allowed.includes(user.role?.toLowerCase())) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;

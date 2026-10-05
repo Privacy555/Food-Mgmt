@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -37,7 +38,7 @@ app.use('/vendors/login', authLimiter);
 app.use('/vendors/register', authLimiter);
 app.use('/receivers/login', authLimiter);
 app.use('/receivers/register', authLimiter);
-app.use('/admin/admin/login', authLimiter);
+app.use('/admin/login', authLimiter);
 
 // ── DB connection ─────────────────────────────────────────────
 require('./db');
@@ -49,7 +50,7 @@ app.get('/health', (req, res) => {
 
 // ── Routes ────────────────────────────────────────────────────
 const vendorRoute = require('./routes/vendorsRoute');
-const receiverRoute = require('./routes/ReceiversRoute');
+const receiverRoute = require('./routes/receiversRoute');
 const adminRoute = require('./routes/adminRoute');
 
 app.use('/vendors', vendorRoute);

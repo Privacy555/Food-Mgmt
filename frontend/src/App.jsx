@@ -96,7 +96,7 @@ function AppRoutes() {
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* Auth Routes */}
-        <Route path="/admin" element={<Login role="admin" endpoint="/admin/admin/login" title="Admin Login" />} />
+        <Route path="/admin" element={<Login role="admin" endpoint="/admin/login" title="Admin Login" />} />
         <Route path="/vendor/login" element={<Login role="vendor" endpoint="/vendors/login" title="Vendor Login" />} />
         <Route path="/receiver/login" element={<Login role="receiver" endpoint="/receivers/login" title="Receiver Login" />} />
         <Route path="/vendor/register" element={<RegisterVendor />} />

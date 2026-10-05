@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 
 const Receivers = require("../model/Receivers");
 const Donation = require("../model/Donation");
@@ -7,14 +8,23 @@ const Donation = require("../model/Donation");
 const { generateToken, jwtAuthMiddleware } = require("../middleware/jwt");
 const allowedRole = require("../middleware/roleMiddleware");
 
-require("dotenv").config();
+
 
 
 
 // 1. RECEIVER REGISTRATION
 
 
-router.post("/register", async (req, res) => {
+router.post("/register", [
+    body('email').isEmail().withMessage('Enter a valid email'),
+    body('password').isLength({ min: 8 }).withMessage('Min 8 chars'),
+    body('phone').notEmpty().withMessage('Phone is required')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ error: errors.array()[0].msg });
+    }
+
     try {
 
         const {
@@ -30,8 +40,7 @@ router.post("/register", async (req, res) => {
         const existingReceiver = await Receivers.findOne({ email });
 
         if (existingReceiver) {
-            return res.status(409).json({
-                message: "Receiver already registered."
+            return res.status(409).json({error: "Receiver already registered."
             });
         }
 
@@ -88,15 +97,13 @@ router.post("/login", async (req, res) => {
 
         // Check account status
         if (receiver.accountStatus !== "active") {
-            return res.status(403).json({
-                message: "Your account is not active."
+            return res.status(403).json({error: "Your account is not active."
             });
         }
 
         // Receiver must be verified by admin
         if (receiver.verificationStatus !== "verified") {
-            return res.status(403).json({
-                message: "Your account has not been verified by admin."
+            return res.status(403).json({error: "Your account has not been verified by admin."
             });
         }
 
@@ -158,8 +165,7 @@ router.get("/profile", async (req, res) => {
             .select("-password");
 
         if (!receiver) {
-            return res.status(404).json({
-                message: "Receiver not found."
+            return res.status(404).json({error: "Receiver not found."
             });
         }
 
@@ -208,8 +214,7 @@ router.put("/profile", async (req, res) => {
         ).select("-password");
 
         if (!receiver) {
-            return res.status(404).json({
-                message: "Receiver not found."
+            return res.status(404).json({error: "Receiver not found."
             });
         }
 
@@ -242,7 +247,7 @@ router.get("/donations", async (req, res) => {
             expiryTime: { $gt: new Date() }
         }).populate(
             "restaurant",
-            "name phone address location"
+            "name phone address location email"
         );
 
         res.status(200).json({
@@ -274,12 +279,11 @@ router.get("/donations/:id", async (req, res) => {
             expiryTime: { $gt: new Date() }
         }).populate(
             "restaurant",
-            "name phone address location"
+            "name phone address location email"
         );
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found or no longer available."
+            return res.status(404).json({error: "Donation not found or no longer available."
             });
         }
 
@@ -300,30 +304,33 @@ router.get("/donations/:id", async (req, res) => {
 
 
 
-// 7. CLAIM DONATION
+// 7. CLAIM DONATION (Atomic operation: guarantees no duplicate claims)
 
 router.post("/donations/:id/claim", async (req, res) => {
     try {
 
-        const donation = await Donation.findOne({
-            _id: req.params.id,
-            status: "available",
-            expiryTime: { $gt: new Date() }
-        });
+        // Atomic check & update: only claims if status is strictly 'available'
+        const donation = await Donation.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                status: "available",
+                expiryTime: { $gt: new Date() }
+            },
+            {
+                $set: {
+                    status: "claimed",
+                    receiver: req.user.id,
+                    claimedAt: new Date()
+                }
+            },
+            { new: true }
+        ).populate("restaurant", "name phone address location email");
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation is no longer available."
+            return res.status(400).json({
+                error: "This food has already been claimed by another organization or is no longer available."
             });
         }
-
-        // For now, mark the entire donation as claimed
-        donation.status = "claimed";
-
-        // Store receiver who claimed it
-        donation.receiver = req.user.id;
-
-        await donation.save();
 
         res.status(200).json({
             message: "Donation claimed successfully.",
@@ -351,8 +358,8 @@ router.get("/my-donations", async (req, res) => {
             receiver: req.user.id
         }).populate(
             "restaurant",
-            "name phone address"
-        );
+            "name phone address location email"
+        ).sort({ claimedAt: -1, createdAt: -1 });
 
         res.status(200).json({
             count: donations.length,
@@ -385,25 +392,27 @@ router.put("/donations/:id/pickup-status", async (req, res) => {
         ];
 
         if (!allowedStatuses.includes(status)) {
-            return res.status(400).json({
-                message: "Invalid pickup status."
+            return res.status(400).json({error: "Invalid pickup status."
             });
         }
 
-        const donation = await Donation.findOne({
-            _id: req.params.id,
-            receiver: req.user.id
-        });
+        const updateData = { status };
+        if (status === "picked_up") updateData.pickedUpAt = new Date();
+        if (status === "completed") updateData.completedAt = new Date();
+
+        const donation = await Donation.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                receiver: req.user.id
+            },
+            { $set: updateData },
+            { new: true }
+        ).populate("restaurant", "name phone address location email");
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found."
+            return res.status(404).json({error: "Donation not found."
             });
         }
-
-        donation.status = status;
-
-        await donation.save();
 
         res.status(200).json({
             message: "Pickup status updated.",
@@ -428,23 +437,26 @@ router.put("/donations/:id/pickup-status", async (req, res) => {
 router.put("/donations/:id/cancel", async (req, res) => {
     try {
 
-        const donation = await Donation.findOne({
-            _id: req.params.id,
-            receiver: req.user.id,
-            status: "claimed"
-        });
+        const donation = await Donation.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                receiver: req.user.id,
+                status: "claimed"
+            },
+            {
+                $set: {
+                    status: "available",
+                    receiver: null,
+                    claimedAt: null
+                }
+            },
+            { new: true }
+        );
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Claim not found."
+            return res.status(404).json({error: "Claim not found."
             });
         }
-
-        // Make donation available again
-        donation.status = "available";
-        donation.receiver = null;
-
-        await donation.save();
 
         res.status(200).json({
             message: "Donation claim cancelled.",
@@ -463,17 +475,3 @@ router.put("/donations/:id/cancel", async (req, res) => {
 
 
 module.exports = router;
-
-
-
-// Receiver
-// ├── Register
-// ├── Login
-// ├── View profile
-// ├── Update profile
-// ├── View nearby donations
-// ├── View a particular donation
-// ├── Claim donation
-// ├── View my claims
-// ├── Update pickup status
-// └── Cancel claim

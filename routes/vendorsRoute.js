@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 
 const Vendors = require("../model/vendors");
 const Donation = require("../model/Donation");
@@ -7,14 +8,23 @@ const Donation = require("../model/Donation");
 const { generateToken, jwtAuthMiddleware } = require("../middleware/jwt");
 const allowedRole = require("../middleware/roleMiddleware");
 
-require("dotenv").config();
+
 
 
 // ======================================================
 // VENDOR REGISTRATION
 // ======================================================
 
-router.post("/register", async (req, res) => {
+router.post("/register", [
+    body('email').isEmail().withMessage('Enter a valid email'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('phone').notEmpty().withMessage('Phone is required')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ error: errors.array()[0].msg });
+    }
+
     try {
 
         const {
@@ -33,8 +43,7 @@ router.post("/register", async (req, res) => {
         const existingVendor = await Vendors.findOne({ email });
 
         if (existingVendor) {
-            return res.status(409).json({
-                message: "Vendor with this email already exists."
+            return res.status(409).json({error: "Vendor with this email already exists."
             });
         }
 
@@ -69,8 +78,7 @@ router.post("/register", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -92,16 +100,14 @@ router.post("/login", async (req, res) => {
 
 
         if (!vendor) {
-            return res.status(401).json({
-                message: "Invalid credentials."
+            return res.status(401).json({error: "Invalid credentials."
             });
         }
 
 
         // Check account status
         if (vendor.accountStatus !== "active") {
-            return res.status(403).json({
-                message: "Your account is not active."
+            return res.status(403).json({error: "Your account is not active."
             });
         }
 
@@ -110,16 +116,14 @@ router.post("/login", async (req, res) => {
         const isMatch = await vendor.comparePassword(password);
 
         if (!isMatch) {
-            return res.status(401).json({
-                message: "Invalid credentials."
+            return res.status(401).json({error: "Invalid credentials."
             });
         }
 
 
         // Check whether vendor has been verified
         if (vendor.verificationStatus !== "verified") {
-            return res.status(403).json({
-                message: "Your account has not been verified by admin yet."
+            return res.status(403).json({error: "Your account has not been verified by admin yet."
             });
         }
 
@@ -141,15 +145,14 @@ router.post("/login", async (req, res) => {
 
         res.status(200).json({
             message: "Login successful.",
-            Token: token
+            token: token
         });
 
     } catch (err) {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -185,8 +188,7 @@ router.get("/profile", async (req, res) => {
         const vendor = await Vendors.findById(req.user.id);
 
         if (!vendor) {
-            return res.status(404).json({
-                message: "Vendor not found."
+            return res.status(404).json({error: "Vendor not found."
             });
         }
 
@@ -199,8 +201,7 @@ router.get("/profile", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -226,8 +227,7 @@ router.put("/profile", async (req, res) => {
         const vendor = await Vendors.findById(req.user.id);
 
         if (!vendor) {
-            return res.status(404).json({
-                message: "Vendor not found."
+            return res.status(404).json({error: "Vendor not found."
             });
         }
 
@@ -263,8 +263,7 @@ router.put("/profile", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -293,17 +292,30 @@ router.post("/donations", async (req, res) => {
         const vendor = await Vendors.findById(req.user.id);
 
         if (!vendor) {
-            return res.status(404).json({
-                message: "Vendor not found."
+            return res.status(404).json({error: "Vendor not found."
             });
         }
 
 
         // Only verified vendors can donate
         if (vendor.verificationStatus !== "verified") {
-            return res.status(403).json({
-                message: "Vendor must be verified before creating donations."
+            return res.status(403).json({error: "Vendor must be verified before creating donations."
             });
+        }
+
+        // Validate expiryTime is in the future
+        if (!expiryTime || new Date(expiryTime) <= new Date()) {
+            return res.status(400).json({error: "Expiry time must be in the future."});
+        }
+
+        // Format pickupLocation with GeoJSON type if coordinates are provided
+        let formattedPickupLocation = pickupLocation;
+        if (pickupLocation && pickupLocation.coordinates) {
+            formattedPickupLocation = {
+                address: pickupLocation.address,
+                type: pickupLocation.type || "Point",
+                coordinates: pickupLocation.coordinates
+            };
         }
 
 
@@ -317,7 +329,7 @@ router.post("/donations", async (req, res) => {
             quantityUnit,
             preparedAt,
             expiryTime,
-            pickupLocation,
+            pickupLocation: formattedPickupLocation,
             notes
         });
 
@@ -334,8 +346,7 @@ router.post("/donations", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -357,8 +368,9 @@ router.get("/donations", async (req, res) => {
 
 
         if (donations.length === 0) {
-            return res.status(404).json({
-                message: "No donations found."
+            return res.status(200).json({
+                count: 0,
+                donations: []
             });
         }
 
@@ -372,8 +384,45 @@ router.get("/donations", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
+        });
+    }
+});
+
+
+// ======================================================
+// FIX: Bug #7 - Route order: Move /donations/claimed ABOVE /donations/:id
+// VIEW CLAIMED DONATIONS
+// ======================================================
+
+router.get("/donations/claimed", async (req, res) => {
+    try {
+
+        const donations = await Donation
+            .find({
+                restaurant: req.user.id,
+                status: {
+                    $in: [
+                        "claimed",
+                        "picked_up",
+                        "completed"
+                    ]
+                }
+            })
+            .populate("receiver", "name email phone address")
+            .sort({ createdAt: -1 });
+
+
+        res.status(200).json({
+            count: donations.length,
+            donations
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -395,8 +444,7 @@ router.get("/donations/:id", async (req, res) => {
 
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found."
+            return res.status(404).json({error: "Donation not found."
             });
         }
 
@@ -409,8 +457,7 @@ router.get("/donations/:id", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -430,16 +477,14 @@ router.put("/donations/:id", async (req, res) => {
 
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found."
+            return res.status(404).json({error: "Donation not found."
             });
         }
 
 
         // Don't allow editing after someone has claimed it
         if (donation.status !== "available") {
-            return res.status(400).json({
-                message: "Only available donations can be updated."
+            return res.status(400).json({error: "Only available donations can be updated."
             });
         }
 
@@ -474,8 +519,13 @@ router.put("/donations/:id", async (req, res) => {
         if (expiryTime !== undefined)
             donation.expiryTime = expiryTime;
 
-        if (pickupLocation !== undefined)
-            donation.pickupLocation = pickupLocation;
+        if (pickupLocation !== undefined) {
+            donation.pickupLocation = {
+                address: pickupLocation.address || donation.pickupLocation?.address,
+                type: "Point",
+                coordinates: pickupLocation.coordinates || donation.pickupLocation?.coordinates
+            };
+        }
 
         if (notes !== undefined)
             donation.notes = notes;
@@ -493,8 +543,7 @@ router.put("/donations/:id", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -514,15 +563,13 @@ router.put("/donations/:id/cancel", async (req, res) => {
 
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found."
+            return res.status(404).json({error: "Donation not found."
             });
         }
 
 
         if (donation.status !== "available") {
-            return res.status(400).json({
-                message: "Only available donations can be cancelled."
+            return res.status(400).json({error: "Only available donations can be cancelled."
             });
         }
 
@@ -541,46 +588,7 @@ router.put("/donations/:id/cancel", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
-        });
-    }
-});
-
-
-// ======================================================
-// VIEW CLAIMED DONATIONS
-// ======================================================
-
-router.get("/donations/claimed", async (req, res) => {
-    try {
-
-        const donations = await Donation
-            .find({
-                restaurant: req.user.id,
-                status: {
-                    $in: [
-                        "claimed",
-                        "picked_up",
-                        "completed"
-                    ]
-                }
-            })
-            .populate("receiver", "name email phone address")
-            .sort({ createdAt: -1 });
-
-
-        res.status(200).json({
-            count: donations.length,
-            donations
-        });
-
-    } catch (err) {
-
-        console.log(err);
-
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -600,20 +608,19 @@ router.put("/donations/:id/picked-up", async (req, res) => {
 
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found."
+            return res.status(404).json({error: "Donation not found."
             });
         }
 
 
         if (donation.status !== "claimed") {
-            return res.status(400).json({
-                message: "Donation must be claimed before pickup."
+            return res.status(400).json({error: "Donation must be claimed before pickup."
             });
         }
 
 
         donation.status = "picked_up";
+        donation.pickedUpAt = new Date();
 
         await donation.save();
 
@@ -627,8 +634,7 @@ router.put("/donations/:id/picked-up", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
@@ -648,20 +654,19 @@ router.put("/donations/:id/completed", async (req, res) => {
 
 
         if (!donation) {
-            return res.status(404).json({
-                message: "Donation not found."
+            return res.status(404).json({error: "Donation not found."
             });
         }
 
 
         if (donation.status !== "picked_up") {
-            return res.status(400).json({
-                message: "Donation must be picked up first."
+            return res.status(400).json({error: "Donation must be picked up first."
             });
         }
 
 
         donation.status = "completed";
+        donation.completedAt = new Date();
 
         await donation.save();
 
@@ -675,27 +680,10 @@ router.put("/donations/:id/completed", async (req, res) => {
 
         console.log(err);
 
-        res.status(500).json({
-            message: "Internal server error."
+        res.status(500).json({error: "Internal server error."
         });
     }
 });
 
 
 module.exports = router;
-
-
-
-
-
-
-// Vendor registration
-// Vendor login
-// Vendor profile
-// Create donation
-// View own donations
-// View a particular donation
-// Update donation
-// Cancel donation
-// See claimed donations
-// Mark food as picked up/completed

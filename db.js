@@ -1,7 +1,5 @@
 const mongoose=require('mongoose');
 
-require('dotenv').config();
-
 const mongooseURL=process.env.LOCALDB;
 
 mongoose.connect(mongooseURL);

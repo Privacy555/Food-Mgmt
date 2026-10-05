@@ -49,7 +49,8 @@ const RegisterReceiver = () => {
       toast.success('Registered! Please wait for admin verification.', { id: toastId });
       navigate('/receiver/login');
     } catch (err) {
-      toast.error(err.response?.data?.message || err.response?.data?.error || 'Registration failed.', { id: toastId });
+      // FIX: Bug #6 - Properly display error message returned from backend
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Registration failed.', { id: toastId });
     } finally {
       setLoading(false);
     }

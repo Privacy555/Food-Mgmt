@@ -13,17 +13,17 @@ const router=express.Router();
 const allowedRole=require('./../middleware/roleMiddleware');
 
 
-require('dotenv').config();
 
 
 
-router.post('/admin/login',async(req,res)=>{
+
+router.post('/login',async(req,res)=>{
     try{
         const {email,password}=req.body ;                                                       //the name should be same in model too.
         const user=await Admin.findOne({email}).select('+password');
         
         if(!user){
-            return res.status(401).json({Error:"Invalid Credentials."});
+            return res.status(401).json({error:"Invalid Credentials."});
         }
 
         const isMatch= await user.comparePassword(password);
@@ -40,11 +40,11 @@ router.post('/admin/login',async(req,res)=>{
         user.lastLogin=new Date();                                                              // for updating login date
         await user.save();
 
-        res.status(200).json({Token: token});
+        res.status(200).json({token: token});
         
     }catch(err){
         console.log(err);
-        res.status(500).json({message:"Internal server error. "});
+        res.status(500).json({error:"Internal server error. "});
     }
 });
 
@@ -78,7 +78,7 @@ router.get('/get-vendors/:name',async(req,res)=>{
         const name= req.params.name;
         const users= await Vendors.findOne({name:name});
         if(!users){
-            return res.status(404).json({message:"No vendors found."})
+            return res.status(404).json({error:"No vendors found."})
         }
         res.status(200).json({users});
         console.log("Vendor with given name fetched.");
@@ -93,7 +93,7 @@ router.get('/get-receivers',async(req,res)=>{
     try{
         const users= await Receivers.find();                        //It'll return answer in the form of array. []
         if(users.length===0){
-            return res.status(404).json({message:"No vendors found."})
+            return res.status(404).json({error:"No receivers found."})
         }
         res.status(200).json({users});
     }catch(err){
@@ -108,7 +108,7 @@ router.get('/get-receivers/:name',async(req,res)=>{
         const name= req.params.name;
         const users= await Receivers.findOne({name:name});
         if(!users){
-            return res.status(404).json({message:"No Receivers found."})
+            return res.status(404).json({error:"No Receivers found."})
         }
         res.status(200).json({users});
     }catch(err){
@@ -159,8 +159,7 @@ router.get('/donations', async (req, res) => {
             .populate('restaurant');
 
         if (donations.length === 0) {
-            return res.status(404).json({
-                message: "No donations found."
+            return res.status(404).json({error: "No donations found."
             });
         }
 
@@ -196,8 +195,7 @@ router.put('/vendors/:id/verify', async (req, res) => {
         );
 
         if (!vendor) {
-            return res.status(404).json({
-                message: "Vendor not found."
+            return res.status(404).json({error: "Vendor not found."
             });
         }
 
@@ -231,8 +229,7 @@ router.put('/vendors/:id/reject', async (req, res) => {
         );
 
         if (!vendor) {
-            return res.status(404).json({
-                message: "Vendor not found."
+            return res.status(404).json({error: "Vendor not found."
             });
         }
 
@@ -269,8 +266,7 @@ router.put('/receivers/:id/verify', async (req, res) => {
         );
 
         if (!receiver) {
-            return res.status(404).json({
-                message: "Receiver not found."
+            return res.status(404).json({error: "Receiver not found."
             });
         }
 

@@ -108,6 +108,10 @@ const vendorsSchema = new mongoose.Schema(
                 "blocked"
             ],
             default: "active"
+        },
+        
+        lastLogin: {
+            type: Date
         }
     },
     {

@@ -31,7 +31,7 @@ const Login = ({ role, endpoint, title }) => {
     const toastId = toast.loading('Signing in...');
     try {
       const response = await api.post(endpoint, { email, password });
-      const token = response.data.Token || response.data.token;
+      const token = response.data.token;
 
       if (token) {
         login(token);

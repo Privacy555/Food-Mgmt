@@ -1,11 +1,12 @@
 const mongoose = require("mongoose");
 
+// FIX: Bug #3 - Update pickupLocation to proper GeoJSON format for 2dsphere indexing
 const donationSchema = new mongoose.Schema(
     {
         // Restaurant that is donating the food
         restaurant: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Restaurant",
+            ref: "vendors",
             required: true
         },
 
@@ -49,23 +50,41 @@ const donationSchema = new mongoose.Schema(
             required: true
         },
 
-        // Pickup location
+        // Pickup location in GeoJSON format
         pickupLocation: {
             address: {
                 type: String,
                 required: true
             },
-
-            // GeoJSON format
+            type: {
+                type: String,
+                enum: ["Point"],
+                default: "Point"
+            },
+            // GeoJSON coordinates [longitude, latitude]
             coordinates: {
-                type: [Number], // [longitude, latitude]
+                type: [Number],
                 required: true
             }
         },
 
         receiver: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Receivers",
+            ref: "Orphanage",
+            default: null
+        },
+
+        // Tracking timestamps for real-time notifications
+        claimedAt: {
+            type: Date,
+            default: null
+        },
+        pickedUpAt: {
+            type: Date,
+            default: null
+        },
+        completedAt: {
+            type: Date,
             default: null
         },
 
@@ -95,9 +114,10 @@ const donationSchema = new mongoose.Schema(
 );
 
 
-// GeoSpatial index
+// GeoSpatial index on GeoJSON pickupLocation
+// FIX: Bug #3 - Index the GeoJSON field properly
 donationSchema.index({
-    "pickupLocation.coordinates": "2dsphere"
+    "pickupLocation": "2dsphere"
 });
 
 
@@ -123,6 +143,7 @@ module.exports = mongoose.model("Donation", donationSchema);
 
 //   "pickupLocation": {
 //     "address": "Sector 17, Chandigarh",
+//     "type": "Point",
 //     "coordinates": [76.7794, 30.7333]
 //   },
 
