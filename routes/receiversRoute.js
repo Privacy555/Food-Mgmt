@@ -16,9 +16,13 @@ const allowedRole = require("../middleware/roleMiddleware");
 
 
 router.post("/register", [
+    body('name').trim().notEmpty().withMessage('Organization name is required'),
+    body('manager').trim().notEmpty().withMessage('Manager name is required'),
     body('email').isEmail().withMessage('Enter a valid email'),
-    body('password').isLength({ min: 8 }).withMessage('Min 8 chars'),
-    body('phone').notEmpty().withMessage('Phone is required')
+    body('password')
+        .isLength({ min: 8 }).withMessage('Min 8 chars')
+        .matches(/^(?=.*[A-Za-z])(?=.*\d)/).withMessage('Password must contain at least one letter and one number'),
+    body('phone').trim().notEmpty().withMessage('Phone is required')
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -26,47 +30,72 @@ router.post("/register", [
     }
 
     try {
-
         const {
             name,
-            email,
-            password,
-            phone,
-            address,
-            location
-        } = req.body;
-
-        // Check whether receiver already exists
-        const existingReceiver = await Receivers.findOne({ email });
-
-        if (existingReceiver) {
-            return res.status(409).json({error: "Receiver already registered."
-            });
-        }
-
-        const receiver = new Receivers({
-            name,
+            manager,
             email,
             password,
             phone,
             address,
             location,
+            role
+        } = req.body;
 
+        // Check whether receiver already exists with same email or name
+        const existingReceiver = await Receivers.findOne({
+            $or: [{ email }, { name }]
+        });
+
+        if (existingReceiver) {
+            if (existingReceiver.email === email) {
+                return res.status(409).json({
+                    error: "Receiver with this email already registered."
+                });
+            }
+            return res.status(409).json({
+                error: "Organization with this name already registered."
+            });
+        }
+
+        const receiver = new Receivers({
+            name,
+            manager,
+            email,
+            password,
+            phone,
+            address,
+            location: location || { type: 'Point', coordinates: [76.7794, 30.7333] },
+            role: role || "orphanage",
             // Admin has to verify the receiver
             verificationStatus: "pending",
-
             accountStatus: "active"
         });
 
         await receiver.save();
 
         res.status(201).json({
-            message: "Receiver registered successfully. Waiting for admin verification."
+            message: "Receiver registered successfully. Waiting for admin verification.",
+            receiver: {
+                id: receiver._id,
+                name: receiver.name,
+                manager: receiver.manager,
+                email: receiver.email,
+                verificationStatus: receiver.verificationStatus
+            }
         });
 
     } catch (err) {
+        console.error("Receiver registration error:", err);
 
-        console.log(err);
+        if (err.name === 'ValidationError') {
+            const firstMsg = Object.values(err.errors)[0]?.message || 'Validation error';
+            return res.status(400).json({ error: firstMsg });
+        }
+
+        if (err.code === 11000) {
+            const field = Object.keys(err.keyPattern || {})[0] || 'Email or Name';
+            return res.status(409).json({ error: `${field} is already registered.` });
+        }
 
         res.status(500).json({
             error: "Internal server error."
