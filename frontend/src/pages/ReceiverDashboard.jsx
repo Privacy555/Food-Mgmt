@@ -233,8 +233,9 @@ const ReceiverDashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
+              type="button"
               onClick={() => fetchData(false)}
               className="btn btn-outline text-xs"
               disabled={isRefreshing}
@@ -244,17 +245,19 @@ const ReceiverDashboard = () => {
               <span>Refresh</span>
             </button>
 
-            {/* Tab switch pills */}
-            <div className="flex bg-gray-200 rounded-lg p-1 text-xs font-semibold">
+            {/* Pill Tab Switcher */}
+            <div className="pill-group">
               <button 
+                type="button"
                 onClick={() => setActiveTab('feed')}
-                className={`px-3 py-1.5 rounded-md transition ${activeTab === 'feed' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+                className={`pill-btn ${activeTab === 'feed' ? 'active' : ''}`}
               >
                 Feed ({available.length})
               </button>
               <button 
+                type="button"
                 onClick={() => setActiveTab('claims')}
-                className={`px-3 py-1.5 rounded-md transition ${activeTab === 'claims' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+                className={`pill-btn ${activeTab === 'claims' ? 'active' : ''}`}
               >
                 My Claims ({claims.length})
               </button>
@@ -309,6 +312,7 @@ const ReceiverDashboard = () => {
                               📍 {d.pickupLocation?.address || formatAddress(d.restaurant?.address)}
                             </small>
                             <button 
+                              type="button"
                               onClick={() => handleClaim(d._id)} 
                               className="btn btn-primary w-full text-xs py-1.5 mt-2"
                             >
@@ -325,16 +329,15 @@ const ReceiverDashboard = () => {
 
             {/* Search and Filters */}
             <div className="card p-4">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3.5 top-3 text-muted" />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="search-bar-wrapper">
+                  <Search size={18} className="search-bar-icon" />
                   <input
                     type="text"
                     placeholder="Search meals, donor restaurants, or pickup location..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="form-control text-xs sm:text-sm"
-                    style={{ paddingLeft: '2.4rem' }}
+                    className="search-bar-input"
                   />
                 </div>
 
@@ -400,6 +403,7 @@ const ReceiverDashboard = () => {
                     </div>
 
                     <button 
+                      type="button"
                       onClick={() => handleClaim(d._id)} 
                       className="btn btn-primary w-full text-xs py-2.5 font-bold shadow-xs flex items-center justify-center gap-1.5 mt-2"
                     >
@@ -423,7 +427,7 @@ const ReceiverDashboard = () => {
                 <p className="text-xs sm:text-sm text-muted mt-1 mb-4">
                   Browse the nearby feed and map to reserve meals for your community.
                 </p>
-                <button onClick={() => setActiveTab('feed')} className="btn btn-primary text-xs py-2 px-4">
+                <button type="button" onClick={() => setActiveTab('feed')} className="btn btn-primary text-xs py-2 px-4">
                   <MapPin size={15} /> Explore Nearby Feed
                 </button>
               </div>
@@ -499,12 +503,14 @@ const ReceiverDashboard = () => {
                         {isClaimed && (
                           <>
                             <button
+                              type="button"
                               onClick={() => handleCancelClaim(c._id)}
                               className="btn btn-outline text-xs text-red-600 hover:bg-red-50 py-1.5 px-3"
                             >
                               <XCircle size={14} /> Cancel Claim
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleUpdateStatus(c._id, 'picked_up')}
                               className="btn btn-primary text-xs py-1.5 px-3"
                             >
@@ -514,6 +520,7 @@ const ReceiverDashboard = () => {
                         )}
                         {isPickedUp && (
                           <button
+                            type="button"
                             onClick={() => handleUpdateStatus(c._id, 'completed')}
                             className="btn btn-secondary text-xs py-1.5 px-3"
                           >

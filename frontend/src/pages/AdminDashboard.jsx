@@ -148,8 +148,9 @@ const AdminDashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
+              type="button"
               onClick={() => {
                 if (activeTab === 'overview') fetchData();
                 else fetchAllUsers();
@@ -163,18 +164,20 @@ const AdminDashboard = () => {
             </button>
 
             {/* Mobile Tab Switcher */}
-            <div className="flex bg-gray-200 rounded-lg p-1 text-xs font-semibold sm:hidden">
+            <div className="pill-group mobile-only">
               <button 
+                type="button"
                 onClick={() => setActiveTab('overview')}
-                className={`px-3 py-1.5 rounded-md ${activeTab === 'overview' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+                className={`pill-btn ${activeTab === 'overview' ? 'active' : ''}`}
               >
                 Metrics
               </button>
               <button 
+                type="button"
                 onClick={() => { setActiveTab('users'); fetchAllUsers(); }}
-                className={`px-3 py-1.5 rounded-md ${activeTab === 'users' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+                className={`pill-btn ${activeTab === 'users' ? 'active' : ''}`}
               >
-                Users
+                All Users
               </button>
             </div>
           </div>
@@ -239,6 +242,7 @@ const AdminDashboard = () => {
                           )}
                         </div>
                         <button 
+                          type="button"
                           onClick={() => handleVerifyVendor(v._id)} 
                           className="btn btn-primary text-xs py-1.5 px-3 self-end sm:self-center"
                         >
@@ -278,6 +282,7 @@ const AdminDashboard = () => {
                           {r.phone && <p className="text-[11px] text-muted">{r.phone}</p>}
                         </div>
                         <button 
+                          type="button"
                           onClick={() => handleVerifyReceiver(r._id)} 
                           className="btn btn-primary text-xs py-1.5 px-3 self-end sm:self-center"
                         >
@@ -297,36 +302,38 @@ const AdminDashboard = () => {
           <div className="space-y-6 animate-fade-in">
             {/* Search and Filter Controls */}
             <div className="card p-4">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3.5 top-3 text-muted" />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="search-bar-wrapper">
+                  <Search size={18} className="search-bar-icon" />
                   <input
                     type="text"
                     placeholder="Search users by name, email, phone, or organization..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="form-control pl-10 text-xs sm:text-sm"
-                    style={{ paddingLeft: '2.4rem' }}
+                    className="search-bar-input"
                   />
                 </div>
 
                 {/* Filter Pills */}
-                <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
+                <div className="pill-group">
                   <button
+                    type="button"
                     onClick={() => setUsersFilter('all')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${usersFilter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${usersFilter === 'all' ? 'active' : ''}`}
                   >
                     All ({allVendors.length + allReceivers.length})
                   </button>
                   <button
+                    type="button"
                     onClick={() => setUsersFilter('vendors')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${usersFilter === 'vendors' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${usersFilter === 'vendors' ? 'active' : ''}`}
                   >
                     Vendors ({allVendors.length})
                   </button>
                   <button
+                    type="button"
                     onClick={() => setUsersFilter('receivers')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${usersFilter === 'receivers' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${usersFilter === 'receivers' ? 'active' : ''}`}
                   >
                     Receivers ({allReceivers.length})
                   </button>
@@ -382,6 +389,7 @@ const AdminDashboard = () => {
                       <div className="flex items-center gap-2 self-end sm:self-center">
                         {!isActive && (
                           <button
+                            type="button"
                             onClick={() => {
                               if (u.userType === 'Vendor') handleVerifyVendor(u._id);
                               else handleVerifyReceiver(u._id);

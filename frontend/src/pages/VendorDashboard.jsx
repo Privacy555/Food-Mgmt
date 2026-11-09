@@ -217,7 +217,7 @@ const VendorDashboard = () => {
 
       {/* Main content area */}
       <div className="dashboard-content">
-        {/* Top Header & Mobile Nav Bar */}
+        {/* Top Header & Tab Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b">
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -230,8 +230,9 @@ const VendorDashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
+              type="button"
               onClick={() => fetchDonations(false)}
               className="btn btn-outline text-xs"
               disabled={isRefreshing}
@@ -241,17 +242,19 @@ const VendorDashboard = () => {
               <span>Refresh</span>
             </button>
 
-            {/* Tab switch buttons */}
-            <div className="flex bg-gray-200 rounded-lg p-1 text-xs font-semibold">
+            {/* Pill Tab Switcher */}
+            <div className="pill-group">
               <button 
+                type="button"
                 onClick={() => setActiveTab('post')}
-                className={`px-3 py-1.5 rounded-md transition ${activeTab === 'post' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+                className={`pill-btn ${activeTab === 'post' ? 'active' : ''}`}
               >
                 Post Food
               </button>
               <button 
+                type="button"
                 onClick={() => setActiveTab('donations')}
-                className={`px-3 py-1.5 rounded-md transition ${activeTab === 'donations' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+                className={`pill-btn ${activeTab === 'donations' ? 'active' : ''}`}
               >
                 My Donations ({donations.length})
               </button>
@@ -385,44 +388,47 @@ const VendorDashboard = () => {
         {/* TAB 2: MY DONATIONS (Full-width, clean card layout, not squashed!) */}
         {activeTab === 'donations' && (
           <div className="space-y-6 animate-fade-in">
-            {/* Filter Pills and Summary */}
+            {/* Filter Pills and Search */}
             <div className="card p-4">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3.5 top-3 text-muted" />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="search-bar-wrapper">
+                  <Search size={18} className="search-bar-icon" />
                   <input
                     type="text"
                     placeholder="Search by food name, food type, or claiming NGO..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="form-control text-xs sm:text-sm"
-                    style={{ paddingLeft: '2.4rem' }}
+                    className="search-bar-input"
                   />
                 </div>
 
                 {/* Status Filter Pills */}
-                <div className="flex flex-wrap gap-1.5 bg-gray-100 p-1 rounded-lg">
+                <div className="pill-group">
                   <button 
+                    type="button"
                     onClick={() => setFilter('all')} 
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${filter === 'all' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${filter === 'all' ? 'active' : ''}`}
                   >
                     All ({donations.length})
                   </button>
                   <button 
+                    type="button"
                     onClick={() => setFilter('available')} 
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${filter === 'available' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${filter === 'available' ? 'active' : ''}`}
                   >
                     Available ({availableCount})
                   </button>
                   <button 
+                    type="button"
                     onClick={() => setFilter('claimed')} 
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${filter === 'claimed' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${filter === 'claimed' ? 'active' : ''}`}
                   >
-                    Claimed / Active ({claimedCount})
+                    Claimed ({claimedCount})
                   </button>
                   <button 
+                    type="button"
                     onClick={() => setFilter('completed')} 
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold ${filter === 'completed' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'}`}
+                    className={`pill-btn ${filter === 'completed' ? 'active' : ''}`}
                   >
                     Completed ({completedCount})
                   </button>
@@ -440,7 +446,7 @@ const VendorDashboard = () => {
                     ? "You haven't posted any surplus food yet." 
                     : `No donations currently match the "${filter}" filter.`}
                 </p>
-                <button onClick={() => setActiveTab('post')} className="btn btn-primary text-xs py-2 px-4">
+                <button type="button" onClick={() => setActiveTab('post')} className="btn btn-primary text-xs py-2 px-4">
                   <PackagePlus size={16} /> Post Your First Batch
                 </button>
               </div>
@@ -535,6 +541,7 @@ const VendorDashboard = () => {
                       <div className="pt-4 mt-4 border-t flex flex-wrap justify-end gap-2">
                         {isClaimed && (
                           <button
+                            type="button"
                             onClick={() => handleUpdateStatus(d._id, 'picked_up')}
                             className="btn btn-primary text-xs py-1.5 px-3"
                           >
@@ -543,6 +550,7 @@ const VendorDashboard = () => {
                         )}
                         {isPickedUp && (
                           <button
+                            type="button"
                             onClick={() => handleUpdateStatus(d._id, 'completed')}
                             className="btn btn-secondary text-xs py-1.5 px-3"
                           >

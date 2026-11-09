@@ -46,6 +46,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Global button reset so browser never renders grey outset borders */
+button {
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
 /* Glassmorphism & Panels */
 .glass-panel {
   background: var(--card-bg);
@@ -62,7 +73,7 @@ body {
   padding: 1.5rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .card:hover {
@@ -200,12 +211,82 @@ h1, h2, h3, h4 {
 
 .btn-outline {
   background-color: white;
-  border-color: #d6ddd5;
+  border: 1px solid #d6ddd5;
   color: var(--text-color);
 }
 
 .btn-outline:hover {
   background-color: #f3f6f2;
+}
+
+/* 🔘 Pill & Tab Switcher Components */
+.pill-group {
+  display: inline-flex;
+  align-items: center;
+  background: #ecefec;
+  border: 1px solid #dde2dc;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.pill-btn {
+  padding: 6px 14px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #414c45;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.pill-btn:hover {
+  color: #1f2a24;
+}
+
+.pill-btn.active {
+  background: #ffffff;
+  color: var(--primary-deep);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 🔍 Search Input Wrapper */
+.search-bar-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+}
+
+.search-bar-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b766e;
+  pointer-events: none;
+}
+
+.search-bar-input {
+  width: 100%;
+  padding: 8px 12px 8px 38px;
+  border-radius: 10px;
+  border: 1px solid #d6ddd5;
+  background: #ffffff;
+  font-size: 0.875rem;
+  color: #1f2a24;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-bar-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(23, 106, 75, 0.12);
 }
 
 /* Forms */
@@ -387,12 +468,15 @@ h1, h2, h3, h4 {
   .md\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
   .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
   .lg\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .mobile-only { display: none !important; }
 }
 
 /* ======================================================== */
 /* 📱 MOBILE RESPONSIVENESS FIXES (Screens <= 768px)        */
 /* ======================================================== */
 @media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+
   .dashboard-layout {
     display: flex;
     flex-direction: column;
@@ -403,7 +487,7 @@ h1, h2, h3, h4 {
   .sidebar {
     border-right: none;
     border-bottom: 1px solid var(--line-color);
-    padding: 0.75rem 1rem;
+    padding: 0.65rem 1rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -419,7 +503,7 @@ h1, h2, h3, h4 {
   }
 
   .sidebar h3.nav-brand {
-    display: none; /* Hide in sidebar since navbar already has FoodShare logo */
+    display: none;
   }
 
   .sidebar-link {
@@ -446,7 +530,6 @@ h1, h2, h3, h4 {
     padding: 0 1rem;
   }
 
-  /* Prevent boxes from being joined together on mobile */
   .grid {
     gap: 1.25rem !important;
   }
@@ -467,7 +550,6 @@ h1, h2, h3, h4 {
     margin-bottom: 1rem;
   }
 
-  /* Navbar adjustments for small screens */
   .navbar-content {
     padding: 0.5rem 0;
   }
