@@ -1,108 +1,134 @@
 import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { 
-  MapPin, 
   HeartHandshake, 
-  Navigation, 
+  MapPin, 
+  Clock, 
   RefreshCw, 
+  Navigation, 
   Phone, 
   Mail, 
-  Building, 
-  CheckCircle, 
+  AlertCircle, 
+  Truck, 
+  CheckCircle2, 
   XCircle,
-  ExternalLink
+  Building,
+  Search,
+  ArrowRight
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 
-// Fix leaflet default icon issue in React
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+// Fix Leaflet's default icon issue with bundlers
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
 });
+L.Marker.prototype.options.icon = DefaultIcon;
 
-// User's live location icon
+// Custom pulsing blue dot for the Receiver's own live location
 const userLocationIcon = L.divIcon({
-  className: 'user-marker',
-  html: `<div style="background-color: #2563eb; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 10px rgba(37, 99, 235, 0.8);"></div>`,
+  className: 'user-live-location-pin',
+  html: `<div style="
+    width: 16px;
+    height: 16px;
+    background: #3b82f6;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
+  "></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8]
 });
 
-// FIX: Bug #5 - Re-center map when coordinates change
-const SetViewOnChange = ({ center }) => {
+// Component to dynamically re-center Leaflet map
+function SetViewOnChange({ center }) {
   const map = useMap();
   useEffect(() => {
-    if (center && Array.isArray(center) && center.length === 2) {
+    if (center && center[0] && center[1]) {
       map.setView(center, map.getZoom());
     }
   }, [center, map]);
   return null;
-};
-
-// FIX: Bug #2 - Extract coordinates [lng, lat] from pickupLocation or restaurant and convert to Leaflet [lat, lng]
-const getDonationCoordinates = (d) => {
-  const coords = d.pickupLocation?.coordinates || d.restaurant?.location?.coordinates;
-  if (Array.isArray(coords) && coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-    return [coords[1], coords[0]]; // [lat, lng]
-  }
-  return null;
-};
-
-// Address formatting helper for restaurant objects or strings
-const formatAddress = (address) => {
-  if (!address) return 'Address not available';
-  if (typeof address === 'string') return address;
-  const { street, city, state, pincode } = address;
-  return [street, city, state, pincode].filter(Boolean).join(', ') || 'Address not available';
-};
+}
 
 const ReceiverDashboard = () => {
+  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'claims'
   const [available, setAvailable] = useState([]);
-  const [myClaims, setMyClaims] = useState([]);
+  const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [mapCenter, setMapCenter] = useState([30.7333, 76.7794]);
+  const [mapCenter, setMapCenter] = useState([30.7333, 76.7794]); // Default fallback
   const [userLocation, setUserLocation] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [foodTypeFilter, setFoodTypeFilter] = useState('all');
 
   useEffect(() => {
-    // Use browser geolocation to center the map and mark live location
+    // Acquire user's live browser location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = [pos.coords.latitude, pos.coords.longitude];
-          setMapCenter(coords);
-          setUserLocation(coords);
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setMapCenter([lat, lng]);
+          setUserLocation([lat, lng]);
         },
-        () => {} // silently fall back to default
+        (error) => {
+          console.warn('Geolocation denied or unavailable, using fallback coordinates.', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
       );
     }
-    fetchData();
 
-    // FIX: Bug #4 - Live polling every 30 seconds
+    fetchData(true);
+
+    // Auto-refresh every 20 seconds
     const interval = setInterval(() => {
       fetchData(false);
-    }, 30000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const fetchData = async (showInitialLoader = true) => {
-    if (showInitialLoader && loading) setLoading(true);
-    setIsRefreshing(true);
+  const formatAddress = (address) => {
+    if (!address) return 'Pickup location specified by donor';
+    if (typeof address === 'string') return address;
+    const { street, city, state, pincode } = address;
+    return [street, city, state, pincode].filter(Boolean).join(', ') || 'Pickup location specified by donor';
+  };
+
+  const getDonationCoordinates = (donation) => {
+    if (donation.pickupLocation?.coordinates?.length === 2) {
+      const [lng, lat] = donation.pickupLocation.coordinates;
+      return [lat, lng];
+    }
+    if (donation.restaurant?.location?.coordinates?.length === 2) {
+      const [lng, lat] = donation.restaurant.location.coordinates;
+      return [lat, lng];
+    }
+    return null;
+  };
+
+  const fetchData = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    else setIsRefreshing(true);
+
     try {
       const [availRes, claimsRes] = await Promise.all([
-        api.get('/receivers/donations').catch(() => ({ data: { donations: [] } })),
-        api.get('/receivers/my-donations').catch(() => ({ data: { donations: [] } }))
+        api.get('/receivers/donations'),
+        api.get('/receivers/my-claims')
       ]);
       setAvailable(availRes.data.donations || []);
-      setMyClaims(claimsRes.data.donations || []);
+      setClaims(claimsRes.data.claims || []);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch receiver data', err);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -110,13 +136,13 @@ const ReceiverDashboard = () => {
   };
 
   const handleClaim = async (id) => {
-    const toastId = toast.loading('Claiming...');
+    const toastId = toast.loading('Reserving donation for pickup...');
     try {
       await api.post(`/receivers/donations/${id}/claim`);
-      toast.success('Food claimed successfully!', { id: toastId });
-      fetchData(false);
+      toast.success('Donation claimed successfully! Please pick it up on time.', { id: toastId });
+      await fetchData(false);
+      setActiveTab('claims');
     } catch (err) {
-      // FIX: Bug #6 - Properly display error from backend response
       toast.error(err.response?.data?.error || err.response?.data?.message || 'Error claiming donation', { id: toastId });
     }
   };
@@ -144,225 +170,369 @@ const ReceiverDashboard = () => {
     }
   };
 
-  if (loading) return <div className="container mt-8 text-center text-muted">Loading Dashboard...</div>;
+  const filteredAvailable = available.filter(d => {
+    const q = searchQuery.toLowerCase().trim();
+    let matchesQuery = true;
+    if (q) {
+      matchesQuery = (d.foodName && d.foodName.toLowerCase().includes(q)) ||
+        (d.restaurant?.name && d.restaurant.name.toLowerCase().includes(q)) ||
+        (d.pickupLocation?.address && d.pickupLocation.address.toLowerCase().includes(q));
+    }
+
+    let matchesType = true;
+    if (foodTypeFilter !== 'all') {
+      matchesType = d.foodType === foodTypeFilter;
+    }
+
+    return matchesQuery && matchesType;
+  });
+
+  if (loading) return (
+    <div className="container mt-8 text-center text-muted py-12">
+      <RefreshCw className="animate-spin mx-auto mb-3" size={32} color="var(--primary-color)" />
+      <p>Loading NGO Community Terminal...</p>
+    </div>
+  );
 
   return (
     <div className="dashboard-layout animate-fade-in">
+      {/* Sidebar navigation */}
       <div className="sidebar">
-        <h3 className="nav-brand mb-8">NGO Portal</h3>
-        <div className="sidebar-link active"><MapPin /> Feed</div>
-        <div className="sidebar-link"><HeartHandshake /> My Claims</div>
+        <h3 className="nav-brand mb-6 flex items-center gap-2">
+          <HeartHandshake size={20} color="var(--primary-color)" />
+          <span>NGO Portal</span>
+        </h3>
+        <div 
+          className={`sidebar-link ${activeTab === 'feed' ? 'active' : ''}`}
+          onClick={() => setActiveTab('feed')}
+        >
+          <MapPin size={18} />
+          <span>Nearby Feed &amp; Map</span>
+        </div>
+        <div 
+          className={`sidebar-link ${activeTab === 'claims' ? 'active' : ''}`}
+          onClick={() => setActiveTab('claims')}
+        >
+          <HeartHandshake size={18} />
+          <span>My Claims ({claims.length})</span>
+        </div>
       </div>
-      <div className="dashboard-content grid md:grid-cols-2 gap-8">
-        
-        {/* Available Donations */}
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl">Nearby Donations</h2>
-            {/* FIX: Bug #4 - Manual refresh button */}
+
+      {/* Main Content Area */}
+      <div className="dashboard-content">
+        {/* Top Header & Tab Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              {activeTab === 'feed' ? 'Nearby Food Donations' : 'My Active Claims & Pickups'}
+            </h2>
+            <p className="text-muted text-xs sm:text-sm mt-0.5">
+              {activeTab === 'feed'
+                ? 'Discover fresh surplus food posted by local restaurants and food businesses'
+                : 'Track reserved batches, manage pickup ETA, and confirm handoff receipts'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               onClick={() => fetchData(false)}
-              className="btn btn-secondary text-sm flex items-center gap-1"
+              className="btn btn-outline text-xs"
               disabled={isRefreshing}
               title="Refresh available donations"
             >
               <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              <span>Refresh</span>
             </button>
+
+            {/* Tab switch pills */}
+            <div className="flex bg-gray-200 rounded-lg p-1 text-xs font-semibold">
+              <button 
+                onClick={() => setActiveTab('feed')}
+                className={`px-3 py-1.5 rounded-md transition ${activeTab === 'feed' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+              >
+                Feed ({available.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('claims')}
+                className={`px-3 py-1.5 rounded-md transition ${activeTab === 'claims' ? 'bg-white shadow-xs font-bold text-gray-900' : 'text-gray-600'}`}
+              >
+                My Claims ({claims.length})
+              </button>
+            </div>
           </div>
-          
-          <div className="mb-6 rounded-lg overflow-hidden border border-gray-200 shadow-sm" style={{ height: '300px' }}>
-            <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap contributors'
-              />
-              {/* FIX: Bug #5 - Re-center map dynamically */}
-              <SetViewOnChange center={mapCenter} />
+        </div>
 
-              {/* ADDITIONAL IMPROVEMENT: Show receiver's own live location */}
-              {userLocation && (
-                <Marker position={userLocation} icon={userLocationIcon}>
-                  <Popup>
-                    <strong>You are here</strong><br />
-                    Your current location
-                  </Popup>
-                </Marker>
-              )}
+        {/* TAB 1: NEARBY DONATIONS & LIVE MAP */}
+        {activeTab === 'feed' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Interactive Leaflet Radar Map */}
+            <div className="card p-0 overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b flex justify-between items-center text-xs">
+                <span className="font-bold flex items-center gap-2 text-gray-800">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                  Live Donation Map &middot; {available.length} Batches Near You
+                </span>
+                <span className="text-muted">Click any marker to claim</span>
+              </div>
 
-              {/* FIX: Bug #2 - Correct marker placement using pickupLocation coordinates */}
-              {available.map(d => {
-                const pos = getDonationCoordinates(d);
-                if (!pos) return null;
-                return (
-                  <Marker key={d._id} position={pos}>
-                    <Popup>
-                      <strong>{d.foodName}</strong> ({d.foodType})<br/>
-                      {d.quantity} {d.quantityUnit}<br/>
-                      <small className="text-muted">
-                        📍 {d.pickupLocation?.address || formatAddress(d.restaurant?.address)}
-                      </small><br/>
-                      <button onClick={() => handleClaim(d._id)} className="btn btn-primary mt-2 text-xs py-1 px-2 w-full">
-                        Claim
-                      </button>
-                    </Popup>
-                  </Marker>
-                );
-              })}
-            </MapContainer>
-          </div>
+              <div style={{ height: '320px', width: '100%' }}>
+                <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; OpenStreetMap contributors'
+                  />
+                  <SetViewOnChange center={mapCenter} />
 
-          {available.length === 0 ? (
-            <div className="card text-center text-muted py-12">No available donations right now.</div>
-          ) : (
-            <div className="grid gap-4">
-              {available.map(d => (
-                <div key={d._id} className="card p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg">{d.foodName}</h3>
-                    <span className="badge badge-success">{d.foodType}</span>
-                  </div>
-                  <p className="text-sm text-muted mb-2">{d.quantity} {d.quantityUnit}</p>
-                  
-                  {/* Restaurant details */}
-                  <div className="text-sm text-gray-700 mb-1 flex items-center gap-1.5">
-                    <Building size={14} className="text-gray-500" />
-                    <span><strong>Vendor:</strong> {d.restaurant?.name || 'Restaurant'}</span>
-                  </div>
-                  {d.restaurant?.phone && (
-                    <div className="text-xs text-gray-600 mb-2 flex items-center gap-1.5">
-                      <Phone size={12} className="text-gray-400" />
-                      <span>{d.restaurant.phone}</span>
-                    </div>
+                  {/* Receiver's live location */}
+                  {userLocation && (
+                    <Marker position={userLocation} icon={userLocationIcon}>
+                      <Popup>
+                        <strong>📍 Your Current Location</strong><br />
+                        NGO Receiver Center
+                      </Popup>
+                    </Marker>
                   )}
 
-                  {/* Pickup address */}
-                  <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded border border-gray-100 mb-4 flex items-start gap-1.5">
-                    <MapPin size={14} className="mt-0.5 text-blue-600 shrink-0" />
-                    <div>
-                      <strong>Pickup Address:</strong> {d.pickupLocation?.address || formatAddress(d.restaurant?.address)}
-                    </div>
-                  </div>
-                  
-                  <button onClick={() => handleClaim(d._id)} className="btn btn-primary w-full text-sm py-2">
-                    Claim Food
-                  </button>
+                  {/* Available donation pins */}
+                  {available.map(d => {
+                    const pos = getDonationCoordinates(d);
+                    if (!pos) return null;
+                    return (
+                      <Marker key={d._id} position={pos}>
+                        <Popup>
+                          <div style={{ minWidth: '180px' }}>
+                            <strong style={{ fontSize: '0.9rem' }}>{d.foodName}</strong><br />
+                            <span style={{ fontSize: '0.8rem', color: '#4b5563' }}>
+                              {d.quantity} {d.quantityUnit} &middot; {d.foodType.toUpperCase()}
+                            </span><br/>
+                            <small className="text-muted" style={{ display: 'block', margin: '4px 0' }}>
+                              📍 {d.pickupLocation?.address || formatAddress(d.restaurant?.address)}
+                            </small>
+                            <button 
+                              onClick={() => handleClaim(d._id)} 
+                              className="btn btn-primary w-full text-xs py-1.5 mt-2"
+                            >
+                              Claim Donation
+                            </button>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
+                </MapContainer>
+              </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="card p-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3.5 top-3 text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search meals, donor restaurants, or pickup location..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="form-control text-xs sm:text-sm"
+                    style={{ paddingLeft: '2.4rem' }}
+                  />
                 </div>
-              ))}
+
+                <div className="flex gap-2">
+                  <select 
+                    value={foodTypeFilter} 
+                    onChange={e => setFoodTypeFilter(e.target.value)}
+                    className="form-control text-xs font-semibold"
+                    style={{ width: 'auto' }}
+                  >
+                    <option value="all">All Food Types</option>
+                    <option value="veg">Vegetarian Only</option>
+                    <option value="non-veg">Non-Veg Only</option>
+                  </select>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* My Claims */}
-        <div>
-          <h2 className="text-2xl mb-6">My Claims</h2>
-          {myClaims.length === 0 ? (
-            <div className="card text-center text-muted py-12">You haven't claimed any donations yet.</div>
-          ) : (
-            <div className="grid gap-4">
-              {myClaims.map(d => {
-                const coords = d.pickupLocation?.coordinates || d.restaurant?.location?.coordinates;
-                const googleMapsUrl = coords && coords.length === 2 
-                  ? `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`
-                  : null;
-
-                return (
-                  <div key={d._id} className="card p-5 border border-blue-500/30 shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-lg">{d.foodName}</h3>
-                      <span className={`badge ${
-                        d.status === 'completed' ? 'badge-success' :
-                        d.status === 'picked_up' ? 'badge-warning' : 'badge-primary'
-                      }`}>
-                        {d.status.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-muted mb-3">
-                      {d.quantity} {d.quantityUnit} • {d.foodType?.toUpperCase()}
-                    </p>
-
-                    {/* Vendor Contact & Registered Address Card */}
-                    <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-lg mb-3 text-sm">
-                      <div className="font-semibold text-gray-900 mb-1.5 flex items-center gap-1.5">
-                        <Building size={15} className="text-blue-600" />
-                        <span>Vendor: {d.restaurant?.name || 'Restaurant'}</span>
+            {/* Donation Cards Feed */}
+            {filteredAvailable.length === 0 ? (
+              <div className="card text-center py-12 text-muted">
+                <AlertCircle size={36} className="mx-auto mb-2 text-muted" />
+                <h3 className="text-lg font-bold text-gray-800">No surplus food currently available</h3>
+                <p className="text-xs sm:text-sm text-muted mt-1">
+                  {searchQuery 
+                    ? `No listings match your search for "${searchQuery}".`
+                    : 'Check back shortly or click Refresh — restaurants post throughout the day!'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredAvailable.map(d => (
+                  <div key={d._id} className="card p-5 flex flex-col justify-between hover:border-gray-300 transition">
+                    <div>
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <span className={`badge ${d.foodType === 'veg' ? 'badge-success' : 'badge-danger'}`}>
+                          {d.foodType.toUpperCase()}
+                        </span>
+                        <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                          {d.quantity} {d.quantityUnit}
+                        </span>
                       </div>
-                      {d.restaurant?.phone && (
-                        <div className="text-xs text-gray-700 mb-1 flex items-center gap-1.5">
-                          <Phone size={13} className="text-blue-500" />
-                          <span>Phone: <a href={`tel:${d.restaurant.phone}`} className="text-blue-700 hover:underline">{d.restaurant.phone}</a></span>
-                        </div>
-                      )}
-                      {d.restaurant?.email && (
-                        <div className="text-xs text-gray-700 mb-1 flex items-center gap-1.5">
-                          <Mail size={13} className="text-blue-500" />
-                          <span>Email: <a href={`mailto:${d.restaurant.email}`} className="text-blue-700 hover:underline">{d.restaurant.email}</a></span>
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-700 flex items-start gap-1.5 mt-1">
-                        <MapPin size={13} className="text-blue-500 mt-0.5 shrink-0" />
-                        <span><strong>Vendor Address:</strong> {formatAddress(d.restaurant?.address)}</span>
-                      </div>
-                    </div>
 
-                    {/* Designated Food Pickup Address Card */}
-                    <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg mb-4 text-sm">
-                      <div className="font-semibold text-emerald-950 mb-1 flex items-center gap-1.5">
-                        <Navigation size={15} className="text-emerald-700" />
-                        <span>Designated Food Pickup Address:</span>
+                      <h3 className="text-base font-bold text-gray-900 mb-1">{d.foodName}</h3>
+                      <p className="text-xs text-muted mb-2 font-medium">
+                        {d.restaurant?.name || 'Local Kitchen'}
+                      </p>
+
+                      <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 text-xs text-muted space-y-1 mb-3">
+                        <p className="flex items-center gap-1.5 text-red-700 font-semibold">
+                          <Clock size={13} />
+                          Expires: {new Date(d.expiryTime).toLocaleString()}
+                        </p>
+                        <p className="flex items-start gap-1.5 text-gray-700">
+                          <MapPin size={13} className="shrink-0 mt-0.5 text-emerald-700" />
+                          <span>{d.pickupLocation?.address || formatAddress(d.restaurant?.address)}</span>
+                        </p>
                       </div>
-                      <div className="text-xs text-emerald-900 font-medium pl-5">
-                        {d.pickupLocation?.address || formatAddress(d.restaurant?.address)}
-                      </div>
-                      {googleMapsUrl && (
-                        <div className="mt-2 pl-5">
-                          <a 
-                            href={googleMapsUrl} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="btn btn-secondary inline-flex items-center gap-1 text-xs py-1 px-2.5"
-                          >
-                            <ExternalLink size={12} /> Open in Google Maps
-                          </a>
-                        </div>
+
+                      {d.notes && (
+                        <p className="text-xs text-muted italic mb-3">"{d.notes}"</p>
                       )}
                     </div>
 
-                    {/* Action Controls for Receiver */}
-                    <div className="flex gap-2">
-                      {d.status === 'claimed' && (
-                        <>
-                          <button 
-                            onClick={() => handleUpdateStatus(d._id, 'picked_up')} 
-                            className="btn btn-primary flex-1 text-xs py-2 flex items-center justify-center gap-1"
-                          >
-                            <CheckCircle size={14} /> Mark Picked Up
-                          </button>
-                          <button 
-                            onClick={() => handleCancelClaim(d._id)} 
-                            className="btn btn-secondary text-xs py-2 px-3 text-red-600 hover:bg-red-50 flex items-center gap-1"
-                          >
-                            <XCircle size={14} /> Cancel
-                          </button>
-                        </>
-                      )}
-                      {d.status === 'picked_up' && (
-                        <button 
-                          onClick={() => handleUpdateStatus(d._id, 'completed')} 
-                          className="btn btn-primary w-full text-xs py-2 flex items-center justify-center gap-1"
-                        >
-                          <CheckCircle size={14} /> Mark Completed
-                        </button>
-                      )}
-                    </div>
+                    <button 
+                      onClick={() => handleClaim(d._id)} 
+                      className="btn btn-primary w-full text-xs py-2.5 font-bold shadow-xs flex items-center justify-center gap-1.5 mt-2"
+                    >
+                      <HeartHandshake size={15} />
+                      <span>Claim for Community</span>
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: MY CLAIMS (Spacious, detailed tracking, not squashed!) */}
+        {activeTab === 'claims' && (
+          <div className="space-y-6 animate-fade-in">
+            {claims.length === 0 ? (
+              <div className="card text-center py-12 text-muted">
+                <HeartHandshake size={36} className="mx-auto mb-3 text-muted" />
+                <h3 className="text-lg font-bold text-gray-800">You haven't claimed any donations yet</h3>
+                <p className="text-xs sm:text-sm text-muted mt-1 mb-4">
+                  Browse the nearby feed and map to reserve meals for your community.
+                </p>
+                <button onClick={() => setActiveTab('feed')} className="btn btn-primary text-xs py-2 px-4">
+                  <MapPin size={15} /> Explore Nearby Feed
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {claims.map(c => {
+                  const isClaimed = c.status === 'claimed';
+                  const isPickedUp = c.status === 'picked_up';
+                  const isCompleted = c.status === 'completed';
+
+                  return (
+                    <div key={c._id} className="card p-5 flex flex-col justify-between hover:border-gray-300 transition">
+                      <div>
+                        {/* Header */}
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                          <span className={`badge ${
+                            isClaimed ? 'badge-warning' : 
+                            isPickedUp ? 'badge-primary' : 'badge-success'
+                          }`}>
+                            {c.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                          <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                            {c.quantity} {c.quantityUnit}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">{c.foodName}</h3>
+                        <p className="text-xs font-medium text-muted mb-3">
+                          From: {c.restaurant?.name || 'Restaurant Partner'}
+                        </p>
+
+                        {/* Progress Stepper */}
+                        <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 my-2">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-gray-600">
+                            <span className="text-emerald-700">✓ Claimed</span>
+                            <span>&rarr;</span>
+                            <span className={isPickedUp || isCompleted ? 'text-blue-600' : 'text-gray-400'}>
+                              {isPickedUp || isCompleted ? '✓ Picked Up' : 'Picked Up'}
+                            </span>
+                            <span>&rarr;</span>
+                            <span className={isCompleted ? 'text-emerald-700' : 'text-gray-400'}>
+                              {isCompleted ? '✓ Completed' : 'Completed'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Pickup details box */}
+                        <div className="p-3.5 bg-blue-50/50 rounded-xl border border-blue-100 text-xs space-y-1.5 my-3">
+                          <p className="flex items-start gap-1.5 text-gray-800">
+                            <MapPin size={13} className="shrink-0 mt-0.5 text-blue-600" />
+                            <span><strong>Pickup Address:</strong> {c.pickupLocation?.address || formatAddress(c.restaurant?.address)}</span>
+                          </p>
+                          {c.restaurant?.phone && (
+                            <p className="flex items-center gap-1.5 text-muted">
+                              <Phone size={13} /> Contact: {c.restaurant.phone}
+                            </p>
+                          )}
+                          {c.restaurant?.email && (
+                            <p className="flex items-center gap-1.5 text-muted">
+                              <Mail size={13} /> {c.restaurant.email}
+                            </p>
+                          )}
+                          {c.otp && (
+                            <p className="pt-1 text-emerald-800 font-bold">
+                              Handoff OTP for Vendor: <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-300">{c.otp}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="pt-4 mt-2 border-t flex flex-wrap justify-end gap-2">
+                        {isClaimed && (
+                          <>
+                            <button
+                              onClick={() => handleCancelClaim(c._id)}
+                              className="btn btn-outline text-xs text-red-600 hover:bg-red-50 py-1.5 px-3"
+                            >
+                              <XCircle size={14} /> Cancel Claim
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(c._id, 'picked_up')}
+                              className="btn btn-primary text-xs py-1.5 px-3"
+                            >
+                              <Truck size={14} /> Mark as Picked Up
+                            </button>
+                          </>
+                        )}
+                        {isPickedUp && (
+                          <button
+                            onClick={() => handleUpdateStatus(c._id, 'completed')}
+                            className="btn btn-secondary text-xs py-1.5 px-3"
+                          >
+                            <CheckCircle2 size={14} /> Confirm Handover Received
+                          </button>
+                        )}
+                        {isCompleted && (
+                          <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
+                            <CheckCircle2 size={14} /> Distributed Successfully
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
