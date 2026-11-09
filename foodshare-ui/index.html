@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodShare — Food Management & Redistribution</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            'fs-green': '#176a4b',
+            'fs-green-dark': '#11563c',
+            'fs-green-deep': '#1d5c40',
+            'fs-green-soft': '#e3efe6',
+            'fs-ink': '#1f2a24',
+            'fs-body': '#414c45',
+            'fs-muted': '#6b766e',
+            'fs-bg': '#f1f4f0',
+            'fs-line': '#e3e8e2',
+            'fs-track': '#edefec',
+            'fs-panel': '#eef1ec',
+            'fs-blue': '#4a7fd4',
+            'fs-blue-bg': '#e9f0fa',
+            'fs-blue-text': '#2b5d8f',
+            'fs-amber': '#d9a441',
+            'fs-amber-bg': '#fbf3e2',
+            'fs-amber-text': '#8a6116',
+            'fs-red': '#b34038',
+            'fs-red-bg': '#fbeceb',
+            'fs-red-text': '#a13630',
+            'fs-purple': '#8b6bc7',
+            'fs-purple-bg': '#efeafb',
+            'fs-purple-text': '#6d4fa1',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes fs-ping {
+      0% { transform: scale(1); opacity: 0.7; }
+      80%, 100% { transform: scale(2.8); opacity: 0; }
+    }
+    .fs-ping { animation: fs-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    .fs-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .fs-scroll::-webkit-scrollbar-thumb { background: #cbd5cb; border-radius: 9999px; }
+    .fs-scroll::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body class="bg-fs-bg text-fs-ink font-sans min-h-screen flex flex-col antialiased selection:bg-fs-green selection:text-white">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-fs-line">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('landing')">
+        <div class="w-10 h-10 rounded-xl bg-fs-green flex items-center justify-center text-white shadow-sm shadow-fs-green/20">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          </svg>
+        </div>
+        <div>
+          <span class="text-xl font-extrabold tracking-tight text-fs-ink flex items-center gap-1.5">
+            FoodShare
+            <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-fs-green-soft text-fs-green-deep">BLR</span>
+          </span>
+          <p class="text-[11px] font-medium text-fs-muted leading-none hidden sm:block">Surplus Food Rescue & Redistribution</p>
+        </div>
+      </div>
+
+      <!-- Center Clock Badge -->
+      <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-fs-panel border border-fs-line text-xs font-mono text-fs-body font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="headerClock">BENGALURU · 08 NOV 2026 · 10:30 IST</span>
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <!-- Logged In User Pill (Shown if in a Dashboard) -->
+        <div id="userProfilePill" class="hidden items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-white border border-fs-line shadow-xs text-xs">
+          <div id="userAvatar" class="w-6 h-6 rounded-full bg-fs-green-soft text-fs-green font-bold flex items-center justify-center text-[11px]">
+            A
+          </div>
+          <div class="text-left">
+            <span id="userName" class="font-bold text-fs-ink block leading-tight">Annapurna Kitchen</span>
+            <span id="userRoleBadge" class="text-[10px] text-fs-muted capitalize">Vendor</span>
+          </div>
+        </div>
+
+        <button id="headerLogoutBtn" onclick="logout()" class="hidden px-3 py-1.5 rounded-lg border border-fs-line text-xs font-semibold text-fs-body hover:bg-fs-panel transition">
+          <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Sign Out
+        </button>
+
+        <button id="headerLoginBtn" onclick="navigateTo('login')" class="px-3.5 py-1.5 rounded-lg border border-fs-line text-xs font-semibold text-fs-ink bg-white hover:bg-fs-panel transition">
+          Log In
+        </button>
+        <button id="headerRegisterBtn" onclick="navigateTo('landing')" class="px-3.5 py-1.5 rounded-lg bg-fs-green text-xs font-semibold text-white hover:bg-fs-green-dark shadow-xs transition">
+          Get Started
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= TOAST ALERTS ================= -->
+  <div id="toastContainer" class="fixed top-20 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ================= MAIN CONTENT VIEWS ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 1: LANDING SCREEN                               -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-landing" class="space-y-10">
+      <div class="max-w-3xl">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-fs-green">Food management &amp; redistribution</p>
+        <h1 class="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-fs-ink leading-[1.15]">
+          Share surplus. <br><span class="text-fs-green">Coordinate pickups.</span>
+        </h1>
+        <p class="mt-4 text-base sm:text-lg text-fs-muted max-w-2xl leading-relaxed">
+          Connect local restaurants, caterers, and food businesses with verified NGOs in Bengaluru. Direct surplus to where it matters most within hours.
+        </p>
+      </div>
+
+      <!-- Role Selection Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Vendor Card -->
+        <div class="rounded-2xl border border-fs-line bg-white p-7 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-fs-green-soft text-fs-green-deep">
+                For Food Businesses
+              </span>
+              <span class="text-fs-muted text-xs font-mono">STEP 1 OF 2</span>
+            </div>
+            <h2 class="mt-4 text-2xl font-extrabold text-fs-ink">I have food to donate</h2>
+            <p class="mt-2 text-sm text-fs-muted leading-relaxed">
+              Register your commercial kitchen, hotel, cafeteria or grocery to post surplus food batches before expiry.
+            </p>
+            <div class="my-6 border-t border-fs-line"></div>
+            <ul class="space-y-3.5 text-sm text-fs-body">
+              <li class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-check text-fs-green text-base"></i>
+                <span>Post meals with quantity, food type, and expiry window</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-check text-fs-green text-base"></i>
+                <span>Auto-match & coordinate with verified local NGOs</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-check text-fs-green text-base"></i>
+                <span>Real-time claim updates and OTP handoff confirmation</span>
+              </li>
+            </ul>
+          </div>
+          <div class="mt-8">
+            <button onclick="navigateTo('vendor-register')" class="w-full py-3 px-4 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2">
+              <span>Register as a Vendor</span>
+              <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            <p class="mt-2.5 text-center text-[12px] text-fs-muted">Free account · FSSAI registration verified</p>
+          </div>
+        </div>
+
+        <!-- Receiver NGO Card -->
+        <div class="rounded-2xl border border-fs-line bg-white p-7 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-fs-blue-bg text-fs-blue-text">
+                For Receivers &middot; NGOs
+              </span>
+              <span class="text-fs-muted text-xs font-mono">VERIFIED ACCESS</span>
+            </div>
+            <h2 class="mt-4 text-2xl font-extrabold text-fs-ink">I need food for my community</h2>
+            <p class="mt-2 text-sm text-fs-muted leading-relaxed">
+              Register your non-profit or shelter in Bengaluru to discover available food donations on a live map and claim batches.
+            </p>
+            <div class="my-6 border-t border-fs-line"></div>
+            <ul class="space-y-3.5 text-sm text-fs-body">
+              <li class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-check text-fs-blue text-base"></i>
+                <span>Interactive map with radius distance and freshness timers</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-check text-fs-blue text-base"></i>
+                <span>One-tap reservation system with instant pickup scheduling</span>
+              </li>
+              <li class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-check text-fs-blue text-base"></i>
+                <span>Verified food safety compliance declarations</span>
+              </li>
+            </ul>
+          </div>
+          <div class="mt-8">
+            <button onclick="navigateTo('receiver-register')" class="w-full py-3 px-4 rounded-xl bg-fs-ink hover:bg-black text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2">
+              <span>Register as a Receiver</span>
+              <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            <p class="mt-2.5 text-center text-[12px] text-fs-muted">Free account · NGO Darpan verification required</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Already Registered Banner -->
+      <div class="rounded-2xl bg-white border border-fs-line p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+        <div>
+          <h3 class="font-bold text-base text-fs-ink">Already an approved partner?</h3>
+          <p class="text-xs sm:text-sm text-fs-muted">Log in to view active listings, manage food claims, or review pending approvals.</p>
+        </div>
+        <button onclick="navigateTo('login')" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-fs-line bg-fs-panel hover:bg-white text-sm font-semibold text-fs-ink transition">
+          Log in to your account
+        </button>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 2: LOGIN SCREEN                                 -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-login" class="hidden max-w-md mx-auto py-6">
+      <div class="rounded-2xl border border-fs-line bg-white p-7 shadow-sm">
+        <button onclick="navigateTo('landing')" class="text-xs font-semibold text-fs-green hover:underline flex items-center gap-1.5 mb-6">
+          <i class="fa-solid fa-arrow-left"></i> Back to role selection
+        </button>
+
+        <h2 class="text-2xl font-extrabold text-fs-ink">Sign in to FoodShare</h2>
+        <p class="text-xs text-fs-muted mt-1">Access your business or NGO distribution terminal</p>
+
+        <!-- Role Segmented Switcher -->
+        <div class="mt-6 p-1 rounded-xl bg-fs-panel border border-fs-line grid grid-cols-3 gap-1 text-xs font-semibold">
+          <button id="loginRoleVendor" onclick="selectLoginRole('vendor')" class="py-2 rounded-lg bg-white shadow-xs text-fs-ink">Vendor</button>
+          <button id="loginRoleReceiver" onclick="selectLoginRole('receiver')" class="py-2 rounded-lg text-fs-muted hover:text-fs-ink">Receiver</button>
+          <button id="loginRoleAdmin" onclick="selectLoginRole('admin')" class="py-2 rounded-lg text-fs-muted hover:text-fs-ink">Admin</button>
+        </div>
+
+        <!-- Quick Demo Account Fill -->
+        <div class="mt-4 p-3 rounded-xl bg-fs-green-soft/60 border border-fs-green/20">
+          <p class="text-[11px] font-bold text-fs-green-deep uppercase tracking-wider mb-2">⚡ Quick 1-Click Demo Login</p>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="quickFill('annapurna.kitchen@foodshare.in', 'vendor')" class="px-2.5 py-1 rounded-lg bg-white text-[11px] font-semibold text-fs-ink border border-fs-line shadow-2xs hover:bg-fs-panel">
+              Annapurna Kitchen (Vendor)
+            </button>
+            <button onclick="quickFill('asha.foundation@foodshare.in', 'receiver')" class="px-2.5 py-1 rounded-lg bg-white text-[11px] font-semibold text-fs-ink border border-fs-line shadow-2xs hover:bg-fs-panel">
+              Asha Foundation (NGO)
+            </button>
+            <button onclick="quickFill('admin@foodshare.org', 'admin')" class="px-2.5 py-1 rounded-lg bg-white text-[11px] font-semibold text-fs-ink border border-fs-line shadow-2xs hover:bg-fs-panel">
+              City Admin
+            </button>
+          </div>
+        </div>
+
+        <!-- Login Form -->
+        <form onsubmit="handleLoginSubmit(event)" class="mt-6 space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-fs-ink mb-1.5" for="loginEmail">Email address</label>
+            <input type="email" id="loginEmail" required placeholder="e.g. annapurna.kitchen@foodshare.in" 
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green focus:ring-2 focus:ring-fs-green/10 transition">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-bold text-fs-ink" for="loginPassword">Password</label>
+              <a href="javascript:void(0)" onclick="showToast('Demo mode: Use any password with 6+ characters', 'info')" class="text-xs text-fs-green hover:underline">Forgot?</a>
+            </div>
+            <div class="relative">
+              <input type="password" id="loginPassword" required minlength="6" placeholder="••••••••" 
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green focus:ring-2 focus:ring-fs-green/10 transition pr-10">
+              <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" class="absolute right-3 top-2.5 text-fs-muted hover:text-fs-ink">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-fs-muted pt-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked class="rounded border-fs-line text-fs-green focus:ring-fs-green size-4">
+              <span>Keep me signed in</span>
+            </label>
+          </div>
+
+          <button type="submit" id="loginSubmitBtn" class="w-full mt-2 py-3 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2">
+            <span>Sign In to Terminal</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 3: VENDOR REGISTRATION                          -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-vendor-register" class="hidden max-w-2xl mx-auto py-6">
+      <div class="rounded-2xl border border-fs-line bg-white p-7 sm:p-8 shadow-sm">
+        <button onclick="navigateTo('landing')" class="text-xs font-semibold text-fs-green hover:underline flex items-center gap-1.5 mb-6">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-fs-green uppercase tracking-wider">Vendor Onboarding</span>
+            <h2 class="text-2xl font-extrabold text-fs-ink mt-1">Register your Food Business</h2>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-fs-panel text-xs font-mono font-bold text-fs-body border border-fs-line">
+            STEP 1 / 2
+          </span>
+        </div>
+
+        <form onsubmit="handleVendorRegister(event)" class="mt-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Business / Kitchen Name</label>
+              <input type="text" id="regVendorName" required placeholder="e.g. Annapurna Kitchens" value="Annapurna Kitchens"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green focus:ring-2 focus:ring-fs-green/10">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">FSSAI License Number (14 digits)</label>
+              <input type="text" id="regVendorFssai" required placeholder="11223344556677" value="11223344556677"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green focus:ring-2 focus:ring-fs-green/10">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Primary Food Category</label>
+              <select id="regVendorCategory" class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+                <option value="Cooked meals">Cooked meals & Catered batches</option>
+                <option value="Bakery">Bakery & Breads</option>
+                <option value="Fresh produce">Fresh fruits & vegetables</option>
+                <option value="Packaged foods">Packaged / Dry goods</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Operating Location / Ward</label>
+              <input type="text" id="regVendorWard" required placeholder="e.g. Indiranagar, Bengaluru" value="Indiranagar, Bengaluru"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Official Contact Email</label>
+              <input type="email" id="regVendorEmail" required placeholder="manager@kitchen.in" value="manager@annapurna.in"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Kitchen Phone</label>
+              <input type="tel" id="regVendorPhone" required placeholder="+91 98450 12345" value="+91 98450 12345"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-fs-panel border border-fs-line space-y-2 text-xs text-fs-body">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="checkbox" required checked class="mt-0.5 rounded border-fs-line text-fs-green focus:ring-fs-green size-4">
+              <span>I confirm all surplus food posted meets food safety and hygiene temperatures as per FSSAI regulations.</span>
+            </label>
+          </div>
+
+          <button type="submit" class="w-full py-3 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2">
+            <span>Complete Registration & Open Terminal</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 4: RECEIVER REGISTRATION                        -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-receiver-register" class="hidden max-w-2xl mx-auto py-6">
+      <div class="rounded-2xl border border-fs-line bg-white p-7 sm:p-8 shadow-sm">
+        <button onclick="navigateTo('landing')" class="text-xs font-semibold text-fs-green hover:underline flex items-center gap-1.5 mb-6">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-fs-blue uppercase tracking-wider">Receiver Onboarding</span>
+            <h2 class="text-2xl font-extrabold text-fs-ink mt-1">Register your NGO / Shelter</h2>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-fs-blue-bg text-xs font-mono font-bold text-fs-blue-text border border-fs-blue/20">
+            NGO DARPAN
+          </span>
+        </div>
+
+        <form onsubmit="handleReceiverRegister(event)" class="mt-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Organization / NGO Name</label>
+              <input type="text" id="regNgoName" required placeholder="e.g. Asha Foundation" value="Asha Foundation"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">NGO Darpan ID</label>
+              <input type="text" id="regNgoDarpan" required placeholder="KA/2021/0293847" value="KA/2021/0293847"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Daily Beneficiaries Capacity</label>
+              <input type="number" id="regNgoCapacity" required placeholder="150" value="200"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Primary Distribution Area</label>
+              <input type="text" id="regNgoArea" required placeholder="Indiranagar & Halasuru" value="Indiranagar & Halasuru"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Authorized Contact Person</label>
+              <input type="text" id="regNgoContact" required placeholder="Kavitha Nair" value="Kavitha Nair"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-fs-ink mb-1.5">Contact Phone</label>
+              <input type="tel" id="regNgoPhone" required placeholder="+91 94480 67890" value="+91 94480 67890"
+                     class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-fs-panel border border-fs-line space-y-2 text-xs text-fs-body">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="checkbox" required checked class="mt-0.5 rounded border-fs-line text-fs-green focus:ring-fs-green size-4">
+              <span>We possess adequate food transportation, clean utensils, and sanitized containers for safe transit.</span>
+            </label>
+          </div>
+
+          <button type="submit" class="w-full py-3 rounded-xl bg-fs-ink hover:bg-black text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2">
+            <span>Register & Access Receiver Feed</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 5: VENDOR DASHBOARD                             -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-vendor-dash" class="hidden space-y-8">
+      <!-- Dashboard Top Banner -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-fs-line">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-fs-green-soft text-fs-green-deep">VENDOR DISPATCH</span>
+            <span class="text-xs text-fs-muted">FSSAI #11223344556677</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-fs-ink mt-1">Annapurna Kitchens &middot; Central</h1>
+          <p class="text-xs sm:text-sm text-fs-muted">Post surplus food batches and monitor live pickup status</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="document.getElementById('postFoodModal').classList.remove('hidden')" class="px-4 py-2.5 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white font-semibold text-sm shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Post Surplus Food</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="rounded-xl border border-fs-line bg-white p-4">
+          <span class="text-xs text-fs-muted font-medium">Available Now</span>
+          <p id="vendorStatAvailable" class="text-2xl font-extrabold text-fs-ink mt-1">2 listings</p>
+        </div>
+        <div class="rounded-xl border border-fs-line bg-white p-4">
+          <span class="text-xs text-fs-muted font-medium">NGO Claimed</span>
+          <p id="vendorStatClaimed" class="text-2xl font-extrabold text-fs-amber-text mt-1">1 active</p>
+        </div>
+        <div class="rounded-xl border border-fs-line bg-white p-4">
+          <span class="text-xs text-fs-muted font-medium">Completed Today</span>
+          <p id="vendorStatCompleted" class="text-2xl font-extrabold text-fs-green mt-1">45 meals</p>
+        </div>
+        <div class="rounded-xl border border-fs-line bg-white p-4">
+          <span class="text-xs text-fs-muted font-medium">Total Rescued</span>
+          <p class="text-2xl font-extrabold text-fs-ink mt-1">1,480 kg</p>
+        </div>
+      </div>
+
+      <!-- Active Donations List -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold text-fs-ink">Your Posted Food Listings</h2>
+          <span class="text-xs font-mono text-fs-muted">Live Auto-Sync</span>
+        </div>
+
+        <div id="vendorDonationsList" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Dynamic Donation Cards -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 6: RECEIVER DASHBOARD                           -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-receiver-dash" class="hidden space-y-8">
+      <!-- Receiver Header -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-fs-line">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-fs-blue-bg text-fs-blue-text">RECEIVER NGO TERMINAL</span>
+            <span class="text-xs text-fs-muted">Darpan KA/2021/0293847</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-fs-ink mt-1">Asha Foundation &middot; Indiranagar Shelter</h1>
+          <p class="text-xs sm:text-sm text-fs-muted">Discover nearby surplus food donations and reserve meals for community distribution</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1.5 rounded-lg bg-fs-panel text-xs font-semibold text-fs-body border border-fs-line">
+            <i class="fa-solid fa-location-crosshairs text-fs-green mr-1.5"></i> Location: Indiranagar, BLR
+          </span>
+        </div>
+      </div>
+
+      <!-- Interactive Bengaluru Map -->
+      <div class="rounded-2xl border border-fs-line bg-white overflow-hidden shadow-xs">
+        <div class="px-5 py-3 border-b border-fs-line bg-[#f8faf7] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-fs-green animate-pulse"></span>
+            <span class="text-xs font-bold text-fs-ink">LIVE RADAR &middot; INDIRANAGAR RADIUS (5 KM)</span>
+          </div>
+          <span class="text-xs text-fs-muted font-mono">3 AVAILABLE DONATIONS</span>
+        </div>
+
+        <!-- Stylized Map Canvas -->
+        <div class="relative h-64 sm:h-80 bg-[#e7ebe3] overflow-hidden">
+          <svg viewBox="0 0 860 400" preserveAspectRatio="xMidYMid slice" class="absolute inset-0 w-full h-full select-none" aria-hidden="true">
+            <rect width="860" height="400" fill="#e7ebe3" />
+            <!-- City Blocks -->
+            <rect x="30" y="30" width="120" height="70" rx="4" fill="#dde2d8" />
+            <rect x="30" y="170" width="120" height="110" rx="4" fill="#dde2d8" />
+            <rect x="215" y="30" width="180" height="88" rx="4" fill="#dde2d8" />
+            <rect x="215" y="150" width="180" height="130" rx="4" fill="#dde2d8" />
+            <rect x="215" y="310" width="180" height="70" rx="4" fill="#dde2d8" />
+            <rect x="420" y="90" width="140" height="90" rx="4" fill="#dde2d8" />
+            <rect x="420" y="215" width="140" height="90" rx="4" fill="#dde2d8" />
+            <rect x="590" y="30" width="240" height="60" rx="4" fill="#dde2d8" />
+            <rect x="590" y="120" width="240" height="80" rx="4" fill="#dde2d8" />
+            <rect x="590" y="230" width="240" height="90" rx="4" fill="#dde2d8" />
+            <!-- Parks -->
+            <rect x="55" y="195" width="72" height="62" rx="8" fill="#d3e6cf" />
+            <text x="66" y="232" font-size="11" fill="#7fa07a" font-weight="600">Defense Colony Park</text>
+            <!-- Roads -->
+            <rect x="0" y="128" width="860" height="16" fill="#f7f8f5" />
+            <rect x="0" y="288" width="860" height="24" fill="#f7f8f5" />
+            <rect x="168" y="0" width="26" height="400" fill="#f7f8f5" />
+            <rect x="400" y="0" width="18" height="400" fill="#f7f8f5" />
+            <rect x="572" y="0" width="16" height="400" fill="#f7f8f5" />
+            <!-- Street Labels -->
+            <text x="430" y="66" text-anchor="middle" font-size="12" letter-spacing="4" fill="#9ba499" font-weight="800">INDIRANAGAR</text>
+            <text x="30" y="330" font-size="11" fill="#9ea79c" font-weight="600">100 Feet Road</text>
+            <text x="146" y="330" font-size="11" fill="#9ea79c" font-weight="600" transform="rotate(-90 146 330)" text-anchor="end">CMH Road</text>
+            <text x="414" y="360" font-size="11" fill="#9ea79c" font-weight="600" transform="rotate(-90 414 360)" text-anchor="end">12th Main Road</text>
+          </svg>
+
+          <!-- NGO You Are Here Pin -->
+          <div class="absolute left-[20%] top-[40%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+            <div class="relative">
+              <span class="absolute -inset-2 rounded-full bg-fs-blue/30 fs-ping"></span>
+              <div class="w-8 h-8 rounded-full bg-fs-blue text-white flex items-center justify-center shadow-lg border-2 border-white">
+                <i class="fa-solid fa-house-chimney text-xs"></i>
+              </div>
+            </div>
+            <span class="mt-1 px-2 py-0.5 rounded bg-white/90 backdrop-blur-xs text-[10px] font-bold text-fs-ink shadow-xs border border-fs-line">
+              Asha Foundation (You)
+            </span>
+          </div>
+
+          <!-- Donation Pin 1 -->
+          <div onclick="selectNearbyDonation('DON-101')" class="absolute left-[45%] top-[25%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
+            <div class="relative">
+              <span class="absolute -inset-1.5 rounded-full bg-fs-green/30 fs-ping"></span>
+              <div class="w-9 h-9 rounded-full bg-fs-green text-white flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">
+                <i class="fa-solid fa-utensils text-xs"></i>
+              </div>
+            </div>
+            <span class="mt-1 px-2 py-0.5 rounded bg-white text-[10px] font-bold text-fs-green shadow-xs border border-fs-line">
+              35 Meals · 0.8 km
+            </span>
+          </div>
+
+          <!-- Donation Pin 2 -->
+          <div onclick="selectNearbyDonation('DON-102')" class="absolute left-[65%] top-[60%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
+            <div class="relative">
+              <div class="w-9 h-9 rounded-full bg-fs-green text-white flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">
+                <i class="fa-solid fa-bread-slice text-xs"></i>
+              </div>
+            </div>
+            <span class="mt-1 px-2 py-0.5 rounded bg-white text-[10px] font-bold text-fs-green shadow-xs border border-fs-line">
+              18 kg Bakery · 1.4 km
+            </span>
+          </div>
+
+          <!-- Donation Pin 3 -->
+          <div onclick="selectNearbyDonation('DON-103')" class="absolute left-[80%] top-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
+            <div class="relative">
+              <div class="w-9 h-9 rounded-full bg-fs-green text-white flex items-center justify-center shadow-lg border-2 border-white group-hover:scale-110 transition">
+                <i class="fa-solid fa-bowl-rice text-xs"></i>
+              </div>
+            </div>
+            <span class="mt-1 px-2 py-0.5 rounded bg-white text-[10px] font-bold text-fs-green shadow-xs border border-fs-line">
+              50 Portions · 2.1 km
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feed & Search Filter -->
+      <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-fs-muted text-xs"></i>
+            <input type="text" id="receiverSearchInput" oninput="filterReceiverFeed()" placeholder="Search meals, bakery, cuisine or restaurant name..." 
+                   class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-fs-line bg-white text-xs sm:text-sm focus:outline-none focus:border-fs-green">
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="receiverDistanceFilter" onchange="filterReceiverFeed()" class="px-3 py-2 rounded-xl border border-fs-line bg-white text-xs font-semibold text-fs-body focus:outline-none">
+              <option value="all">Distance: All (Within 5 km)</option>
+              <option value="1">Within 1 km</option>
+              <option value="2">Within 2 km</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Feed Cards -->
+        <div id="receiverFeedList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Active Claims Section -->
+      <div class="pt-6 border-t border-fs-line space-y-4">
+        <h2 class="text-lg font-bold text-fs-ink flex items-center gap-2">
+          <span>Active Claims & Scheduled Pickups</span>
+          <span id="activeClaimsBadge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-fs-blue-bg text-fs-blue-text">1 Active</span>
+        </h2>
+        <div id="receiverClaimsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamic Claims -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- -->
+    <!-- VIEW 7: ADMIN DASHBOARD                              -->
+    <!-- ---------------------------------------------------- -->
+    <div id="view-admin-dash" class="hidden space-y-8">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-fs-line">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-fs-purple-bg text-fs-purple-text">CITY PLATFORM ADMIN</span>
+            <span class="text-xs text-fs-muted">Bengaluru Urban Command</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-fs-ink mt-1">Platform Operations & Compliance</h1>
+          <p class="text-xs sm:text-sm text-fs-muted">Verify food vendors, approve NGO registrations, and monitor redistribution integrity</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+            <i class="fa-solid fa-shield-halved mr-1"></i> System Healthy & Audited
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI Metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="rounded-xl border border-fs-line bg-white p-4 shadow-2xs">
+          <span class="text-xs text-fs-muted font-medium">Total Food Rescued</span>
+          <p class="text-2xl sm:text-3xl font-extrabold text-fs-green mt-1">14,820 kg</p>
+          <span class="text-[11px] text-emerald-700 font-semibold">+820 kg this week</span>
+        </div>
+        <div class="rounded-xl border border-fs-line bg-white p-4 shadow-2xs">
+          <span class="text-xs text-fs-muted font-medium">Registered Donors</span>
+          <p class="text-2xl sm:text-3xl font-extrabold text-fs-ink mt-1">42</p>
+          <span class="text-[11px] text-fs-muted">38 FSSAI verified</span>
+        </div>
+        <div class="rounded-xl border border-fs-line bg-white p-4 shadow-2xs">
+          <span class="text-xs text-fs-muted font-medium">Verified NGOs</span>
+          <p class="text-2xl sm:text-3xl font-extrabold text-fs-blue-text mt-1">28</p>
+          <span class="text-[11px] text-fs-muted">All Darpan certified</span>
+        </div>
+        <div class="rounded-xl border border-fs-line bg-white p-4 shadow-2xs">
+          <span class="text-xs text-fs-muted font-medium">Pending Approvals</span>
+          <p id="adminPendingCount" class="text-2xl sm:text-3xl font-extrabold text-fs-amber-text mt-1">2</p>
+          <span class="text-[11px] text-fs-amber-text font-semibold">Requires immediate review</span>
+        </div>
+      </div>
+
+      <!-- Pending Verifications Queue -->
+      <div class="space-y-4">
+        <h2 class="text-lg font-bold text-fs-ink flex items-center justify-between">
+          <span>Pending Registration Requests</span>
+          <span class="text-xs font-normal text-fs-muted">Review credentials before granting marketplace access</span>
+        </h2>
+
+        <div id="adminPendingList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamic Admin Approvals -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= MODAL: POST SURPLUS FOOD ================= -->
+  <div id="postFoodModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-fs-line">
+      <div class="flex items-center justify-between pb-3 border-b border-fs-line">
+        <h3 class="text-xl font-extrabold text-fs-ink">Post Surplus Food Batch</h3>
+        <button onclick="document.getElementById('postFoodModal').classList.add('hidden')" class="text-fs-muted hover:text-fs-ink">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handlePostFood(event)" class="mt-5 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-fs-ink mb-1.5">Food Batch Title / Item</label>
+          <input type="text" id="postFoodName" required placeholder="e.g. Fresh Cooked Meals (Rice, Dal, Veggies)" 
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-fs-ink mb-1.5">Quantity &amp; Unit</label>
+            <input type="text" id="postFoodQty" required placeholder="e.g. 40 meals or 15 kg" 
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-fs-ink mb-1.5">Food Category</label>
+            <select id="postFoodType" class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+              <option value="Cooked meals">Cooked meals</option>
+              <option value="Bakery">Bakery / Breads</option>
+              <option value="Fresh produce">Fresh produce</option>
+              <option value="Packaged foods">Packaged / Dry</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-fs-ink mb-1.5">Best Before / Expiry Time</label>
+            <input type="text" id="postFoodExpiry" required placeholder="e.g. Today 15:30 IST" value="Today 16:00 IST"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-fs-ink mb-1.5">Pickup Location</label>
+            <input type="text" id="postFoodLocation" required placeholder="e.g. Indiranagar 100 Feet Rd" value="Indiranagar 100 Feet Rd"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-fs-ink mb-1.5">Special Handling / Storage Notes</label>
+          <input type="text" id="postFoodNotes" placeholder="Keep in thermal containers, bring own clean trays..." value="Packed hot in thermal trays. Please bring crates."
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="document.getElementById('postFoodModal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-fs-line text-sm font-semibold text-fs-body hover:bg-fs-panel">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white text-sm font-semibold shadow-xs">
+            Publish Live Listing
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CLAIM FOOD (FOR RECEIVER) ================= -->
+  <div id="claimFoodModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-fs-line">
+      <div class="flex items-center justify-between pb-3 border-b border-fs-line">
+        <h3 class="text-xl font-extrabold text-fs-ink">Confirm Food Claim</h3>
+        <button onclick="document.getElementById('claimFoodModal').classList.add('hidden')" class="text-fs-muted hover:text-fs-ink">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <div class="p-3.5 rounded-xl bg-fs-panel border border-fs-line">
+          <span id="claimModalType" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-fs-green-soft text-fs-green-deep">
+            Cooked Meals
+          </span>
+          <h4 id="claimModalTitle" class="mt-2 text-base font-bold text-fs-ink">Cooked Meals (Rice, Sambar, Subzi)</h4>
+          <p id="claimModalVendor" class="text-xs text-fs-muted">Annapurna Kitchens · Indiranagar 100 Feet Rd</p>
+          <p id="claimModalQty" class="text-xs font-semibold text-fs-body mt-1">Available: 35 portions · Expires 14:00 IST</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-fs-ink mb-1.5">Estimated Pickup Time (ETA)</label>
+          <select id="claimEtaSelect" class="w-full px-3.5 py-2.5 rounded-xl border border-fs-line bg-white text-sm focus:outline-none focus:border-fs-green">
+            <option value="Within 30 mins (11:00 IST)">Within 30 mins (11:00 IST)</option>
+            <option value="Within 45 mins (11:15 IST)">Within 45 mins (11:15 IST)</option>
+            <option value="Within 60 mins (11:30 IST)">Within 60 mins (11:30 IST)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-fs-ink mb-1.5">Pickup Representative &amp; Contact</label>
+          <input type="text" id="claimContactField" readonly value="Kavitha Nair (+91 94480 67890)" 
+                 class="w-full px-3.5 py-2 rounded-xl border border-fs-line bg-fs-panel text-xs text-fs-body">
+        </div>
+
+        <div class="pt-3 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="document.getElementById('claimFoodModal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-fs-line text-sm font-semibold text-fs-body hover:bg-fs-panel">
+            Cancel
+          </button>
+          <button type="button" onclick="executeClaim()" class="px-5 py-2.5 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white text-sm font-semibold shadow-xs">
+            Confirm &amp; Reserve Food
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FLOATING SCREEN SWITCHER ================= -->
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white/95 backdrop-blur-md border border-fs-line shadow-xl rounded-full px-4 py-2 flex items-center gap-1.5 sm:gap-2 text-xs font-semibold">
+    <span class="text-fs-muted uppercase text-[10px] tracking-wider hidden sm:inline mr-1">Switch View:</span>
+    <button onclick="navigateTo('landing')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition" id="nav-btn-landing">Landing</button>
+    <button onclick="navigateTo('login')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition" id="nav-btn-login">Login</button>
+    <button onclick="navigateTo('vendor-register')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition hidden sm:inline" id="nav-btn-vendor-register">Register Vendor</button>
+    <button onclick="navigateTo('receiver-register')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition hidden sm:inline" id="nav-btn-receiver-register">Register NGO</button>
+    <button onclick="navigateTo('vendor-dash')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition" id="nav-btn-vendor-dash">Vendor Dash</button>
+    <button onclick="navigateTo('receiver-dash')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition" id="nav-btn-receiver-dash">Receiver Dash</button>
+    <button onclick="navigateTo('admin-dash')" class="px-2.5 py-1 rounded-full hover:bg-fs-panel transition" id="nav-btn-admin-dash">Admin</button>
+  </div>
+
+  <!-- ================= JAVASCRIPT APP STATE & LOGIC ================= -->
+  <script>
+    // --- Application State ---
+    const state = {
+      view: 'landing',
+      currentUser: null, // { email, role, name }
+      loginRole: 'vendor',
+      donations: [
+        {
+          id: 'DON-101',
+          name: 'Cooked Meals (Rice, Sambar, Mix Veggies)',
+          qty: '35 meals',
+          type: 'Cooked meals',
+          expiry: 'Today 14:00 IST',
+          vendor: 'Annapurna Kitchens',
+          location: 'Indiranagar 100 Feet Rd',
+          distance: '0.8 km',
+          status: 'available', // available | claimed | picked_up | completed
+          claim: null
+        },
+        {
+          id: 'DON-102',
+          name: 'Fresh Bread Loaves & Vegetable Buns',
+          qty: '18 kg',
+          type: 'Bakery',
+          expiry: 'Today 16:30 IST',
+          vendor: 'Artisan Oven Indiranagar',
+          location: 'CMH Road, Indiranagar',
+          distance: '1.4 km',
+          status: 'claimed',
+          claim: {
+            org: 'Asha Foundation',
+            contact: 'Kavitha Nair',
+            phone: '+91 94480 67890',
+            claimedAt: '10:15 IST',
+            otp: '4829'
+          }
+        },
+        {
+          id: 'DON-103',
+          name: 'Pre-portioned Vegetable Biryani Boxes',
+          qty: '50 portions',
+          type: 'Cooked meals',
+          expiry: 'Today 15:00 IST',
+          vendor: 'Spice & Savor Caterers',
+          location: '12th Main Road, Indiranagar',
+          distance: '2.1 km',
+          status: 'available',
+          claim: null
+        }
+      ],
+      pendingApprovals: [
+        {
+          id: 'REQ-201',
+          kind: 'vendor',
+          name: 'Bangalore Tiffin Express',
+          category: 'Catering & Cloud Kitchen',
+          addr: 'Halasuru Metro Station Road, Bengaluru',
+          fssai: '11224987654321',
+          contact: 'Rajesh G. (+91 98860 11223)'
+        },
+        {
+          id: 'REQ-202',
+          kind: 'receiver',
+          name: 'Janani Old Age & Orphan Shelter',
+          category: 'Community Welfare NGO',
+          addr: 'Vivek Nagar, Bengaluru',
+          fssai: 'Darpan KA/2023/008819',
+          contact: 'Sister Teresa (+91 97410 44556)'
+        }
+      ],
+      activeClaimPendingId: null
+    };
+
+    // Navigation Handler
+    function navigateTo(viewName) {
+      state.view = viewName;
+      document.querySelectorAll('main > div').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`view-${viewName}`);
+      if (target) target.classList.remove('hidden');
+
+      // Update Floating Switcher Pills
+      document.querySelectorAll('[id^="nav-btn-"]').forEach(btn => {
+        btn.classList.remove('bg-fs-green', 'text-white');
+      });
+      const activeBtn = document.getElementById(`nav-btn-${viewName}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-fs-green', 'text-white');
+      }
+
+      // Update Header user state
+      renderHeaderAuth();
+
+      // Render view-specific data
+      if (viewName === 'vendor-dash') renderVendorDash();
+      if (viewName === 'receiver-dash') renderReceiverDash();
+      if (viewName === 'admin-dash') renderAdminDash();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderHeaderAuth() {
+      const pill = document.getElementById('userProfilePill');
+      const logoutBtn = document.getElementById('headerLogoutBtn');
+      const loginBtn = document.getElementById('headerLoginBtn');
+      const registerBtn = document.getElementById('headerRegisterBtn');
+
+      if (state.currentUser) {
+        pill.classList.remove('hidden');
+        pill.classList.add('flex');
+        logoutBtn.classList.remove('hidden');
+        loginBtn.classList.add('hidden');
+        registerBtn.classList.add('hidden');
+
+        document.getElementById('userName').textContent = state.currentUser.name;
+        document.getElementById('userRoleBadge').textContent = state.currentUser.role;
+        document.getElementById('userAvatar').textContent = state.currentUser.name[0].toUpperCase();
+      } else {
+        pill.classList.add('hidden');
+        pill.classList.remove('flex');
+        logoutBtn.classList.add('hidden');
+        loginBtn.classList.remove('hidden');
+        registerBtn.classList.remove('hidden');
+      }
+    }
+
+    // Role switcher on Login
+    function selectLoginRole(role) {
+      state.loginRole = role;
+      ['vendor', 'receiver', 'admin'].forEach(r => {
+        const btn = document.getElementById(`loginRole${r.charAt(0).toUpperCase() + r.slice(1)}`);
+        if (r === role) {
+          btn.className = 'py-2 rounded-lg bg-white shadow-xs text-fs-ink font-bold';
+        } else {
+          btn.className = 'py-2 rounded-lg text-fs-muted hover:text-fs-ink font-semibold';
+        }
+      });
+    }
+
+    function quickFill(email, role) {
+      selectLoginRole(role);
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPassword').value = 'password123';
+      showToast(`Filled credentials for ${role} demo`, 'info');
+    }
+
+    function togglePasswordVisibility(id, btn) {
+      const input = document.getElementById(id);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = '<i class="fa-regular fa-eye-slash text-sm"></i>';
+      } else {
+        input.type = 'password';
+        btn.innerHTML = '<i class="fa-regular fa-eye text-sm"></i>';
+      }
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const role = state.loginRole;
+      let name = 'Annapurna Kitchens';
+      if (role === 'receiver') name = 'Asha Foundation';
+      if (role === 'admin') name = 'Bangalore City Admin';
+
+      state.currentUser = { email, role, name };
+      showToast(`Welcome back, ${name}!`, 'success');
+
+      if (role === 'vendor') navigateTo('vendor-dash');
+      else if (role === 'receiver') navigateTo('receiver-dash');
+      else navigateTo('admin-dash');
+    }
+
+    function logout() {
+      state.currentUser = null;
+      showToast('Signed out successfully', 'info');
+      navigateTo('landing');
+    }
+
+    function handleVendorRegister(e) {
+      e.preventDefault();
+      const name = document.getElementById('regVendorName').value;
+      state.currentUser = { email: document.getElementById('regVendorEmail').value, role: 'vendor', name };
+      showToast(`Registration submitted! Terminal activated for ${name}`, 'success');
+      navigateTo('vendor-dash');
+    }
+
+    function handleReceiverRegister(e) {
+      e.preventDefault();
+      const name = document.getElementById('regNgoName').value;
+      state.currentUser = { email: 'asha.foundation@foodshare.in', role: 'receiver', name };
+      showToast(`NGO profile registered! Access granted to nearby radar`, 'success');
+      navigateTo('receiver-dash');
+    }
+
+    // --- Vendor Dash Logic ---
+    function renderVendorDash() {
+      const listEl = document.getElementById('vendorDonationsList');
+      listEl.innerHTML = '';
+
+      let availableCount = 0;
+      let claimedCount = 0;
+
+      state.donations.forEach(d => {
+        if (d.status === 'available') availableCount++;
+        if (d.status === 'claimed') claimedCount++;
+
+        let statusBadge = '';
+        if (d.status === 'available') {
+          statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-fs-green-soft text-fs-green-deep border border-fs-green/20">Available · Waiting for NGO</span>';
+        } else if (d.status === 'claimed') {
+          statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-fs-amber-bg text-fs-amber-text border border-fs-amber/20">Claimed · Pickup Scheduled</span>';
+        } else if (d.status === 'picked_up') {
+          statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-fs-blue-bg text-fs-blue-text border border-fs-blue/20">In Transit with NGO</span>';
+        } else {
+          statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">Completed · Handed Off</span>';
+        }
+
+        const card = document.createElement('div');
+        card.className = 'rounded-2xl border border-fs-line bg-white p-5 shadow-xs flex flex-col justify-between';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between text-xs text-fs-muted">
+              <span class="font-mono font-bold">${d.id}</span>
+              ${statusBadge}
+            </div>
+            <h3 class="mt-2.5 text-lg font-bold text-fs-ink">${d.name}</h3>
+            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-fs-body">
+              <span class="px-2 py-0.5 rounded bg-fs-panel font-semibold">${d.qty}</span>
+              <span class="px-2 py-0.5 rounded bg-fs-panel">${d.type}</span>
+              <span class="text-fs-red font-semibold"><i class="fa-regular fa-clock mr-1"></i>Expires ${d.expiry}</span>
+            </div>
+
+            ${d.claim ? `
+              <div class="mt-4 p-3.5 rounded-xl bg-fs-panel border border-fs-line text-xs">
+                <div class="flex items-center justify-between font-bold text-fs-ink">
+                  <span>Claimed by: ${d.claim.org}</span>
+                  <span class="font-mono text-fs-green">OTP: ${d.claim.otp}</span>
+                </div>
+                <p class="text-fs-muted mt-0.5">Contact: ${d.claim.contact} (${d.claim.phone})</p>
+                <p class="text-fs-muted mt-0.5">Claimed at: ${d.claim.claimedAt}</p>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="mt-5 pt-3 border-t border-fs-line flex items-center justify-end gap-2">
+            ${d.status === 'claimed' ? `
+              <button onclick="updateDonationStatus('${d.id}', 'picked_up')" class="px-3.5 py-1.5 rounded-lg bg-fs-green text-xs font-semibold text-white hover:bg-fs-green-dark">
+                Verify OTP & Hand Off
+              </button>
+            ` : ''}
+            ${d.status === 'picked_up' ? `
+              <button onclick="updateDonationStatus('${d.id}', 'completed')" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700">
+                Mark Completed
+              </button>
+            ` : ''}
+            ${d.status === 'available' ? `
+              <button onclick="deleteDonation('${d.id}')" class="px-3 py-1.5 rounded-lg border border-fs-line text-xs font-semibold text-fs-muted hover:text-fs-red hover:bg-fs-red-bg">
+                Withdraw Listing
+              </button>
+            ` : ''}
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+
+      document.getElementById('vendorStatAvailable').textContent = `${availableCount} listings`;
+      document.getElementById('vendorStatClaimed').textContent = `${claimedCount} active`;
+    }
+
+    function handlePostFood(e) {
+      e.preventDefault();
+      const name = document.getElementById('postFoodName').value;
+      const qty = document.getElementById('postFoodQty').value;
+      const type = document.getElementById('postFoodType').value;
+      const expiry = document.getElementById('postFoodExpiry').value;
+      const location = document.getElementById('postFoodLocation').value;
+
+      const newId = `DON-${100 + state.donations.length + 1}`;
+      state.donations.unshift({
+        id: newId,
+        name,
+        qty,
+        type,
+        expiry,
+        vendor: state.currentUser?.name || 'Annapurna Kitchens',
+        location,
+        distance: '0.4 km',
+        status: 'available',
+        claim: null
+      });
+
+      document.getElementById('postFoodModal').classList.add('hidden');
+      showToast('Surplus food batch published to live radar!', 'success');
+      renderVendorDash();
+    }
+
+    function updateDonationStatus(id, newStatus) {
+      const d = state.donations.find(x => x.id === id);
+      if (d) {
+        d.status = newStatus;
+        showToast(`Status updated: ${d.name} is now ${newStatus.replace('_', ' ')}`, 'success');
+        renderVendorDash();
+      }
+    }
+
+    function deleteDonation(id) {
+      state.donations = state.donations.filter(x => x.id !== id);
+      showToast('Donation listing withdrawn', 'info');
+      renderVendorDash();
+    }
+
+    // --- Receiver Dash Logic ---
+    function renderReceiverDash() {
+      filterReceiverFeed();
+      renderReceiverClaims();
+    }
+
+    function filterReceiverFeed() {
+      const q = (document.getElementById('receiverSearchInput')?.value || '').toLowerCase();
+      const dist = document.getElementById('receiverDistanceFilter')?.value || 'all';
+
+      const listEl = document.getElementById('receiverFeedList');
+      listEl.innerHTML = '';
+
+      const availableItems = state.donations.filter(d => {
+        if (d.status !== 'available') return false;
+        const matchesQuery = d.name.toLowerCase().includes(q) || d.type.toLowerCase().includes(q) || d.vendor.toLowerCase().includes(q);
+        let matchesDist = true;
+        const dVal = parseFloat(d.distance);
+        if (dist === '1') matchesDist = dVal <= 1.0;
+        if (dist === '2') matchesDist = dVal <= 2.0;
+        return matchesQuery && matchesDist;
+      });
+
+      if (availableItems.length === 0) {
+        listEl.innerHTML = `<div class="col-span-full py-8 text-center text-fs-muted text-sm">No food donations match your search filter in this radius.</div>`;
+        return;
+      }
+
+      availableItems.forEach(d => {
+        const card = document.createElement('div');
+        card.className = 'rounded-2xl border border-fs-line bg-white p-5 shadow-xs flex flex-col justify-between hover:border-fs-green transition';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="px-2 py-0.5 rounded font-bold bg-fs-green-soft text-fs-green-deep">${d.type}</span>
+              <span class="font-semibold text-fs-muted"><i class="fa-solid fa-location-dot text-fs-green mr-1"></i>${d.distance}</span>
+            </div>
+            <h3 class="mt-2.5 text-base font-bold text-fs-ink line-clamp-1">${d.name}</h3>
+            <p class="text-xs text-fs-muted mt-1">${d.vendor} · ${d.location}</p>
+            <div class="mt-3 p-2.5 rounded-xl bg-fs-panel flex items-center justify-between text-xs">
+              <span class="font-bold text-fs-ink">${d.qty}</span>
+              <span class="text-fs-red font-semibold"><i class="fa-regular fa-clock mr-1"></i>Expires ${d.expiry}</span>
+            </div>
+          </div>
+          <div class="mt-5">
+            <button onclick="openClaimModal('${d.id}')" class="w-full py-2.5 rounded-xl bg-fs-green hover:bg-fs-green-dark text-white font-semibold text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-hand-holding-heart"></i>
+              <span>Claim for Community</span>
+            </button>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function renderReceiverClaims() {
+      const container = document.getElementById('receiverClaimsContainer');
+      container.innerHTML = '';
+
+      const claimed = state.donations.filter(d => d.claim && (d.status === 'claimed' || d.status === 'picked_up'));
+      document.getElementById('activeClaimsBadge').textContent = `${claimed.length} Active`;
+
+      if (claimed.length === 0) {
+        container.innerHTML = `<div class="col-span-full py-6 text-center text-fs-muted text-xs bg-white rounded-xl border border-fs-line">No active pickups scheduled. Explore available donations above.</div>`;
+        return;
+      }
+
+      claimed.forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'rounded-2xl border border-fs-line bg-white p-5 shadow-xs';
+        el.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-mono font-bold text-fs-blue">${d.id}</span>
+            <span class="px-2.5 py-0.5 rounded-full font-bold bg-fs-blue-bg text-fs-blue-text">${d.status === 'claimed' ? 'Pickup Scheduled' : 'In Transit'}</span>
+          </div>
+          <h3 class="text-base font-bold text-fs-ink mt-2">${d.name}</h3>
+          <p class="text-xs text-fs-muted mt-0.5">From: ${d.vendor} (${d.location})</p>
+          <div class="mt-3 p-3 rounded-xl bg-fs-panel border border-fs-line flex items-center justify-between text-xs">
+            <div>
+              <span class="text-fs-muted text-[10px] block uppercase font-bold">Verification Handoff OTP</span>
+              <span class="font-mono text-base font-extrabold text-fs-green">${d.claim.otp}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-fs-muted text-[10px] block uppercase font-bold">Portion Count</span>
+              <span class="font-bold text-fs-ink">${d.qty}</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+    }
+
+    function selectNearbyDonation(id) {
+      const d = state.donations.find(x => x.id === id);
+      if (d) {
+        openClaimModal(id);
+      }
+    }
+
+    function openClaimModal(id) {
+      const d = state.donations.find(x => x.id === id);
+      if (!d) return;
+
+      state.activeClaimPendingId = id;
+      document.getElementById('claimModalType').textContent = d.type;
+      document.getElementById('claimModalTitle').textContent = d.name;
+      document.getElementById('claimModalVendor').textContent = `${d.vendor} · ${d.location}`;
+      document.getElementById('claimModalQty').textContent = `Available: ${d.qty} · ${d.distance} away · Expires ${d.expiry}`;
+
+      document.getElementById('claimFoodModal').classList.remove('hidden');
+    }
+
+    function executeClaim() {
+      const id = state.activeClaimPendingId;
+      const d = state.donations.find(x => x.id === id);
+      if (!d) return;
+
+      d.status = 'claimed';
+      d.claim = {
+        org: state.currentUser?.name || 'Asha Foundation',
+        contact: 'Kavitha Nair',
+        phone: '+91 94480 67890',
+        claimedAt: '10:35 IST',
+        otp: Math.floor(1000 + Math.random() * 9000).toString()
+      };
+
+      document.getElementById('claimFoodModal').classList.add('hidden');
+      showToast(`Success! You claimed ${d.name}. Handoff OTP is ${d.claim.otp}`, 'success');
+      renderReceiverDash();
+    }
+
+    // --- Admin Dash Logic ---
+    function renderAdminDash() {
+      const listEl = document.getElementById('adminPendingList');
+      listEl.innerHTML = '';
+
+      document.getElementById('adminPendingCount').textContent = state.pendingApprovals.length;
+
+      if (state.pendingApprovals.length === 0) {
+        listEl.innerHTML = `<div class="col-span-full py-8 text-center text-fs-muted text-sm bg-white rounded-xl border border-fs-line">All registrations approved! Zero pending reviews.</div>`;
+        return;
+      }
+
+      state.pendingApprovals.forEach(req => {
+        const card = document.createElement('div');
+        card.className = 'rounded-2xl border border-fs-line bg-white p-5 shadow-xs flex flex-col justify-between';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="px-2.5 py-0.5 rounded-full font-bold ${req.kind === 'vendor' ? 'bg-fs-green-soft text-fs-green-deep' : 'bg-fs-blue-bg text-fs-blue-text'}">
+                ${req.kind === 'vendor' ? 'Commercial Food Vendor' : 'Community NGO Receiver'}
+              </span>
+              <span class="font-mono text-fs-amber-text font-bold">Pending Review</span>
+            </div>
+            <h3 class="mt-2.5 text-lg font-bold text-fs-ink">${req.name}</h3>
+            <p class="text-xs text-fs-muted mt-0.5">${req.category} · ${req.addr}</p>
+            <div class="mt-3 p-3 rounded-xl bg-fs-panel space-y-1 text-xs text-fs-body">
+              <p><span class="font-bold text-fs-ink">License / ID:</span> <span class="font-mono">${req.fssai}</span></p>
+              <p><span class="font-bold text-fs-ink">Contact Person:</span> ${req.contact}</p>
+            </div>
+          </div>
+          <div class="mt-5 pt-3 border-t border-fs-line flex items-center justify-end gap-2">
+            <button onclick="rejectApproval('${req.id}')" class="px-3.5 py-1.5 rounded-lg border border-fs-line text-xs font-semibold text-fs-red hover:bg-fs-red-bg transition">
+              Reject
+            </button>
+            <button onclick="approveRequest('${req.id}')" class="px-4 py-1.5 rounded-lg bg-fs-green text-xs font-semibold text-white hover:bg-fs-green-dark transition">
+              Verify &amp; Approve
+            </button>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function approveRequest(id) {
+      const item = state.pendingApprovals.find(x => x.id === id);
+      state.pendingApprovals = state.pendingApprovals.filter(x => x.id !== id);
+      showToast(`Approved ${item.name}! Notification dispatched.`, 'success');
+      renderAdminDash();
+    }
+
+    function rejectApproval(id) {
+      const item = state.pendingApprovals.find(x => x.id === id);
+      state.pendingApprovals = state.pendingApprovals.filter(x => x.id !== id);
+      showToast(`Registration rejected for ${item.name}`, 'info');
+      renderAdminDash();
+    }
+
+    // --- Toast Notifications Helper ---
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold flex items-center gap-2.5 transition-all transform translate-y-2 opacity-0 duration-200 bg-white';
+      
+      if (type === 'success') {
+        toast.classList.add('border-fs-green/30', 'text-fs-green-deep');
+        toast.innerHTML = `<i class="fa-solid fa-circle-check text-fs-green text-sm"></i><span>${msg}</span>`;
+      } else if (type === 'error') {
+        toast.classList.add('border-fs-red/30', 'text-fs-red');
+        toast.innerHTML = `<i class="fa-solid fa-circle-exclamation text-fs-red text-sm"></i><span>${msg}</span>`;
+      } else {
+        toast.classList.add('border-fs-line', 'text-fs-ink');
+        toast.innerHTML = `<i class="fa-solid fa-circle-info text-fs-blue text-sm"></i><span>${msg}</span>`;
+      }
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => toast.remove(), 200);
+      }, 3500);
+    }
+
+    // Initialize View
+    navigateTo('landing');
+  </script>
+</body>
+</html>
+
