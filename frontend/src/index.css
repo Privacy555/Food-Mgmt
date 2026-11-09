@@ -463,11 +463,17 @@ h1, h2, h3, h4 {
 .border { border-width: 1px; border-style: solid; border-color: var(--line-color); }
 .overflow-hidden { overflow: hidden; }
 
+/* Visibility Utilities */
+.mobile-only {
+  display: none !important;
+}
+
 /* Grid responsive */
 @media (min-width: 769px) {
   .md\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
   .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
   .lg\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .desktop-only { display: flex !important; }
   .mobile-only { display: none !important; }
 }
 
@@ -476,6 +482,18 @@ h1, h2, h3, h4 {
 /* ======================================================== */
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
+  .mobile-only { display: block !important; }
+  .pill-group.mobile-only { display: inline-flex !important; }
+
+  .glass-panel {
+    padding: 1.5rem 1.15rem;
+    border-radius: 14px;
+  }
+
+  .auth-container {
+    padding: 1.5rem 1rem;
+    min-height: calc(100vh - 75px);
+  }
 
   .dashboard-layout {
     display: flex;
